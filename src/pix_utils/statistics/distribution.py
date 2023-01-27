@@ -178,19 +178,29 @@ class DurationDistribution:
         return qbp_distribution
 
 
-def get_best_fitting_distribution(data: list) -> DurationDistribution:
+def get_best_fitting_distribution(data: list, remove_outliers: bool = False) -> DurationDistribution:
+    """
+    Discover the distribution (exponential, normal, uniform, log-normal, and gamma) that best fits the values in [data].
+
+    :param data:            Values to fit a distribution for.
+    :param remove_outliers: If true, remove outliers from the sample.
+
+    :return: the best fitting distribution.
+    """
+    # Filter outliers
+    filtered_data = _reject_outliers(data) if remove_outliers else data
     # Check for fixed value
-    fix_value = _check_fix(data)
+    fix_value = _check_fix(filtered_data)
     if fix_value is not None:
         # If it is a fixed value, infer distribution
         distribution = DurationDistribution("fix", fix_value, 0.0, 0.0, fix_value, fix_value)
     else:
         # Otherwise, compute basic statistics and try with other distributions
-        mean = np.mean(data)
-        var = np.var(data)
-        std = np.std(data)
-        d_min = min(data)
-        d_max = max(data)
+        mean = np.mean(filtered_data)
+        var = np.var(filtered_data)
+        std = np.std(filtered_data)
+        d_min = min(filtered_data)
+        d_max = max(filtered_data)
         # Create distribution candidates
         dist_candidates = [
             DurationDistribution("expon", mean, var, std, d_min, d_max),
@@ -206,9 +216,9 @@ def get_best_fitting_distribution(data: list) -> DurationDistribution:
         best_emd = sys.float_info.max
         for distribution_candidate in dist_candidates:
             # Generate a list of observations from the distribution
-            generated_data = distribution_candidate.generate_sample(len(data))
+            generated_data = distribution_candidate.generate_sample(len(filtered_data))
             # Compute its distance with the observed data
-            emd = wasserstein_distance(data, generated_data)
+            emd = wasserstein_distance(filtered_data, generated_data)
             # Update the best distribution if better
             if emd < best_emd:
                 best_emd = emd
@@ -217,6 +227,15 @@ def get_best_fitting_distribution(data: list) -> DurationDistribution:
         distribution = best_distribution
     # Return best distribution
     return distribution
+
+
+def _reject_outliers(data, m=8.):
+    # https://stackoverflow.com/a/16562028
+    data = np.asarray(data)
+    d = np.abs(data - np.median(data))
+    mdev = np.median(d)
+    s = d / mdev if mdev else 0.
+    return data[s < m]
 
 
 def _check_fix(data_list, delta=5):
@@ -232,3 +251,29 @@ def _check_fix(data_list, delta=5):
             value = d1
     # Return fixed value with more apparitions
     return value
+
+
+def get_observations_histogram(data: list, num_bins: int = 20, remove_outliers: bool = False) -> dict:
+    """
+    Build a histogram with the values in [data], with [num_bins] bins. It builds the histogram, computes the CDF and the values of each
+    bin of the CDF.
+
+    :param data:            Data to build the histogram.
+    :param num_bins:        Number of bins to use in the histogram.
+    :param remove_outliers: If true, remove outliers from the sample.
+
+    :return: A dict with the histogram in Prosimos format, storing the CDF values and middle points.
+    """
+    filtered_durations = _reject_outliers(data) if remove_outliers else data
+    bins = np.linspace(min(filtered_durations), max(filtered_durations), num_bins + 1)
+    hist, _ = np.histogram(filtered_durations, bins=bins)
+    cdf = np.cumsum(hist)
+    cdf = cdf / cdf[-1]
+    bin_midpoints = (bins[:-1] + bins[1:]) / 2
+    return {
+        'distribution_name': "histogram_sampling",
+        'histogram_data': {
+            'cdf': [float(num) for num in cdf],
+            'bin_midpoints': [float(num) for num in bin_midpoints]
+        }
+    }
