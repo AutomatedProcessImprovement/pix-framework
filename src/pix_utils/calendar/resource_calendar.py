@@ -2,6 +2,7 @@
 # The main structures have been copied and simplified from Prosimos #
 # project (https://github.com/AutomatedProcessImprovement/Prosimos/blob/main/bpdfr_simulation_engine/resource_calendar.py).
 # ----------------------------------------------------------------- #
+from typing import List
 
 import pandas as pd
 
@@ -46,6 +47,12 @@ class Interval:
             end.replace(hour=23, minute=59, second=59, microsecond=999)
         self.end = end
         self.duration = (end - start).total_seconds()
+
+    def __eq__(self, other):
+        if isinstance(other, Interval):
+            return self.start == other.start and self.end == other.end
+        else:
+            return False
 
 
 def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar) -> pd.Timestamp:
@@ -116,3 +123,44 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
             last_available = start
     # Return last available timestamp
     return last_available
+
+
+def absolute_unavailability_intervals_within(
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        schedule: RCalendar
+) -> List[Interval]:
+    """
+    Compute the list of intervals (in absolute timestamps) from [start] to [end] where, based on the working intervals in [schedule], the
+    resource is not working.
+
+    :param start:       Start of the interval to get the non-working periods from.
+    :param end:         End of the interval to get the non-working periods from.
+    :param schedule:    Working calendar with the working periods of each weekday.
+
+    :return: a list with the non-working intervals from [start] to [end].
+    """
+    non_working_intervals = []
+    if start < end:
+        # Begin search with [start] and go over until reaching the end
+        current_instant = start
+        while current_instant < end:
+            # Go over the working intervals of the current weekday, storing the non-working periods
+            day_intervals = schedule.work_intervals[current_instant.weekday()]
+            for interval in day_intervals:
+                # Move interval to current day
+                interval_start = interval.start.replace(day=current_instant.day, month=current_instant.month, year=current_instant.year)
+                interval_end = interval.end.replace(day=current_instant.day, month=current_instant.month, year=current_instant.year)
+                if current_instant < interval_end:
+                    if current_instant < interval_start:
+                        # Non-working time gap between [current_instant] and the start of the current working interval, save it
+                        non_working_intervals += [Interval(current_instant, min(interval_start, end))]
+                    # Advance [current_instant] to the end of the working interval
+                    current_instant = min(interval_end, end)
+            # Current day finished, add non-working interval from current instant to end of day and advance
+            end_of_day = current_instant.replace(hour=23, minute=59, second=59, microsecond=999999)
+            if current_instant < end:
+                non_working_intervals += [Interval(current_instant, min(end_of_day, end))]
+                current_instant = (current_instant + pd.Timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Return found non-working intervals
+    return non_working_intervals
