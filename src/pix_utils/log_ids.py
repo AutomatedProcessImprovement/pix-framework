@@ -3,14 +3,17 @@ from dataclasses import dataclass
 
 @dataclass
 class EventLogIDs:
+    # General
     case: str = 'case'  # Case ID
     activity: str = 'activity'  # Activity label
-    enabled_time: str = 'enabled_time'  # Enablement time of the activity instance
+    resource: str = 'resource'  # Resource who performed this activity instance
     start_time: str = 'start_timestamp'  # Start time of the activity instance
     end_time: str = 'end_timestamp'  # End time of the activity instance
+    # Start time estimator
+    enabled_time: str = 'enabled_time'  # Enablement time of the activity instance
+    enabling_activity: str = 'enabling¨_activity'  # Label of the activity instance enabling the current one
     available_time: str = 'available_time'  # Last availability time of the resource who performed this activity instance
     estimated_start_time: str = 'estimated_start_time'  # Estimated start time of the activity instance
-    resource: str = 'resource'  # Resource who performed this activity instance
 
 
 DEFAULT_CSV_IDS = EventLogIDs(case='case_id',
