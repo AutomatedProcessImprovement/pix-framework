@@ -2,6 +2,7 @@
 # The main structures have been copied and simplified from Prosimos #
 # project (https://github.com/AutomatedProcessImprovement/Prosimos/blob/main/bpdfr_simulation_engine/resource_calendar.py).
 # ----------------------------------------------------------------- #
+from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
@@ -18,9 +19,31 @@ conversion_table = {
 }
 
 
+@dataclass
+class Interval:
+    def __init__(self, start: pd.Timestamp, end: pd.Timestamp):
+        self.start = start
+        if end < start and end.hour == 0 and end.minute == 0:
+            end.replace(hour=23, minute=59, second=59, microsecond=999)
+        self.end = end
+        self.duration = (end - start).total_seconds()
+
+    def __eq__(self, other):
+        if isinstance(other, Interval):
+            return self.start == other.start and self.end == other.end
+        else:
+            return False
+
+    def merge_interval(self, n_interval: 'Interval'):
+        self.start = min(n_interval.start, self.start)
+        self.end = max(n_interval.end, self.end)
+        self.duration = (self.end - self.start).total_seconds()
+
+
 class RCalendar:
     def __init__(self, calendar_id: str):
         self.calendar_id = calendar_id
+        self.default_date = pd.Timestamp.now().date()
         self.work_intervals = {i: list() for i in range(0, 7)}
 
     def to_json(self) -> list:
@@ -39,20 +62,42 @@ class RCalendar:
         # Return list with working schedule
         return items
 
+    def _add_interval(self, w_day: str, interval: Interval):
+        i = 0
+        for to_merge in self.work_intervals[w_day]:
+            if to_merge.end < interval.start:
+                i += 1
+            else:
+                if interval.end < to_merge.start:
+                    break
+                to_merge.merge_interval(interval)
+                i += 1
+                while i < len(self.work_intervals[w_day]):
+                    next_i = self.work_intervals[w_day][i]
+                    if to_merge.end < next_i.start:
+                        break
+                    if next_i.start <= to_merge.end < next_i.end:
+                        to_merge.merge_interval(next_i)
+                    del self.work_intervals[w_day][i]
+                return
+        self.work_intervals[w_day].insert(i, interval)
 
-class Interval:
-    def __init__(self, start: pd.Timestamp, end: pd.Timestamp):
-        self.start = start
-        if end < start and end.hour == 0 and end.minute == 0:
-            end.replace(hour=23, minute=59, second=59, microsecond=999)
-        self.end = end
-        self.duration = (end - start).total_seconds()
-
-    def __eq__(self, other):
-        if isinstance(other, Interval):
-            return self.start == other.start and self.end == other.end
-        else:
-            return False
+    def add_calendar_item(self, from_day: str, to_day: str, begin_time: str, end_time: str):
+        if from_day.upper() in str_week_days and to_day.upper() in str_week_days:
+            try:
+                t_interval = Interval(
+                    start=pd.Timestamp.combine(self.default_date, pd.Timestamp(begin_time).time()),
+                    end=pd.Timestamp.combine(self.default_date, pd.Timestamp(end_time).time())
+                )
+                d_s = str_week_days[from_day.upper()]
+                d_e = str_week_days[to_day.upper()]
+                while True:
+                    self._add_interval(d_s % 7, t_interval)
+                    if d_s % 7 == d_e:
+                        break
+                    d_s += 1
+            except ValueError:
+                return
 
 
 def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar) -> pd.Timestamp:
