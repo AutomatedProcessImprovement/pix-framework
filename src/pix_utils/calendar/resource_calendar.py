@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
+import pytz
 
 str_week_days = {"MONDAY": 0, "TUESDAY": 1, "WEDNESDAY": 2, "THURSDAY": 3, "FRIDAY": 4, "SATURDAY": 5, "SUNDAY": 6}
 int_week_days = {0: "MONDAY", 1: "TUESDAY", 2: "WEDNESDAY", 3: "THURSDAY", 4: "FRIDAY", 5: "SATURDAY", 6: "SUNDAY"}
@@ -122,8 +123,12 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
         day_intervals = schedule.work_intervals[last_available.weekday()]
         for interval in reversed(day_intervals):
             # Move interval to current day
-            interval_start = interval.start.replace(day=last_available.day, month=last_available.month, year=last_available.year)
-            interval_end = interval.end.replace(day=last_available.day, month=last_available.month, year=last_available.year)
+            interval_start = interval.start.replace(
+                day=last_available.day, month=last_available.month, year=last_available.year, tzinfo=pytz.timezone('UTC')
+            )
+            interval_end = interval.end.replace(
+                day=last_available.day, month=last_available.month, year=last_available.year, tzinfo=pytz.timezone('UTC')
+            )
             if interval_end < last_available:
                 # The last available is later than the end of the current working interval
                 if (last_available - interval_end) > pd.Timedelta(seconds=2):
