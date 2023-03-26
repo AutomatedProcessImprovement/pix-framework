@@ -177,6 +177,11 @@ class DurationDistribution:
         # Return parsed distribution
         return qbp_distribution
 
+    def __str__(self):
+        return "DurationDistribution(name: {}, mean: {}, var: {}, std: {}, min: {}, max: {})".format(
+            self.name, self.mean, self.var, self.std, self.min, self.max
+        )
+
 
 def get_best_fitting_distribution(data: list, remove_outliers: bool = False) -> DurationDistribution:
     """
