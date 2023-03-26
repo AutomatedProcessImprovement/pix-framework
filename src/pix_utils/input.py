@@ -1,16 +1,18 @@
+from typing import Optional
+
 import pandas as pd
 
 from pix_utils.log_ids import EventLogIDs
 
 
-def read_csv_log(log_path, log_ids: EventLogIDs, missing_resource: str = "NOT_SET", sort=True) -> pd.DataFrame:
+def read_csv_log(log_path, log_ids: EventLogIDs, missing_resource: Optional[str] = "NOT_SET", sort=True) -> pd.DataFrame:
     """
     Read an event log from a CSV file given the column IDs in [log_ids]. Set the enabled_time, start_time, and end_time columns to date,
     set the NA resource cells to [missing_value] if not None, and sort by [end, start, enabled].
 
     :param log_path: path to the CSV log file.
     :param log_ids: IDs of the columns of the event log.
-    :param missing_resource: string to set as NA value for the resource column.
+    :param missing_resource: string to set as NA value for the resource column (not set if None).
     :param sort: if true, sort event log by start, end, enabled (if available).
 
     :return: the read event log,
@@ -25,6 +27,9 @@ def read_csv_log(log_path, log_ids: EventLogIDs, missing_resource: str = "NOT_SE
             event_log[log_ids.resource] = missing_resource
         else:
             event_log[log_ids.resource].fillna(missing_resource, inplace=True)
+    # Set resource type to string if numeric
+    if log_ids.resource in event_log.columns:
+        event_log[log_ids.resource] = event_log[log_ids.resource].apply(str)
     # Convert timestamp value to pd.Timestamp (setting timezone to UTC)
     event_log[log_ids.end_time] = pd.to_datetime(event_log[log_ids.end_time], utc=True)
     if log_ids.start_time in event_log.columns:
