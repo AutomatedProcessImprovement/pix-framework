@@ -199,8 +199,12 @@ def absolute_unavailability_intervals_within(
             day_intervals = schedule.work_intervals[current_instant.weekday()]
             for interval in day_intervals:
                 # Move interval to current day
-                interval_start = interval.start.replace(day=current_instant.day, month=current_instant.month, year=current_instant.year)
-                interval_end = interval.end.replace(day=current_instant.day, month=current_instant.month, year=current_instant.year)
+                interval_start = interval.start.replace(
+                    day=current_instant.day, month=current_instant.month, year=current_instant.year, tzinfo=pytz.timezone('UTC')
+                )
+                interval_end = interval.end.replace(
+                    day=current_instant.day, month=current_instant.month, year=current_instant.year, tzinfo=pytz.timezone('UTC')
+                )
                 if current_instant < interval_end:
                     if current_instant < interval_start:
                         # Non-working time gap between [current_instant] and the start of the current working interval, save it
