@@ -3,6 +3,45 @@ import pandas as pd
 from pix_utils.calendar.resource_calendar import RCalendar, Interval, get_last_available_timestamp, absolute_unavailability_intervals_within
 
 
+def test_calendar_add_calendar_item_non_overlapping():
+    # Create empty calendar
+    working_calendar = RCalendar("test")
+    # Add non-overlapping intervals through method
+    working_calendar.add_calendar_item("MONDAY", "MONDAY", "10:00:00", "14:00:00")
+    working_calendar.add_calendar_item("WEDNESDAY", "WEDNESDAY", "10:00:00", "14:00:00")
+    working_calendar.add_calendar_item("WEDNESDAY", "WEDNESDAY", "16:00:00", "20:00:00")
+    working_calendar.add_calendar_item("FRIDAY", "FRIDAY", "16:00:00", "20:00:00")
+    # Assert it
+    morning_shift = Interval(pd.Timestamp("10:00:00"), pd.Timestamp("14:00:00"))
+    evening_shift = Interval(pd.Timestamp("16:00:00"), pd.Timestamp("20:00:00"))
+    assert working_calendar.work_intervals[0] == [morning_shift]
+    assert working_calendar.work_intervals[2] == [morning_shift, evening_shift]
+    assert working_calendar.work_intervals[4] == [evening_shift]
+
+
+def test_calendar_add_calendar_item_overlapping():
+    # Reset calendar
+    working_calendar = RCalendar("test")
+    # Add overlapping intervals through method
+    working_calendar.add_calendar_item("WEDNESDAY", "WEDNESDAY", "10:00:00", "14:00:00")
+    working_calendar.add_calendar_item("WEDNESDAY", "WEDNESDAY", "14:00:00", "20:00:00")
+    # Assert it
+    shift = Interval(pd.Timestamp("10:00:00"), pd.Timestamp("20:00:00"))
+    assert working_calendar.work_intervals[2] == [shift]
+
+
+def test_calendar_add_calendar_item_multiple_days():
+    # Reset calendar
+    working_calendar = RCalendar("test")
+    # Add overlapping intervals through method
+    working_calendar.add_calendar_item("TUESDAY", "THURSDAY", "10:00:00", "14:00:00")
+    # Assert it
+    shift = Interval(pd.Timestamp("10:00:00"), pd.Timestamp("14:00:00"))
+    assert working_calendar.work_intervals[1] == [shift]
+    assert working_calendar.work_intervals[2] == [shift]
+    assert working_calendar.work_intervals[3] == [shift]
+
+
 def test_get_last_available_timestamp_24_7():
     # Create working calendar with 24/7
     working_calendar = RCalendar("test")
@@ -150,10 +189,10 @@ def test_absolute_unavailability_intervals_within():
         end=pd.Timestamp("2023-01-08T19:35:11"),
         schedule=working_calendar
     ) == [
-        Interval(pd.Timestamp("2023-01-06T23:10:46"), pd.Timestamp("2023-01-06T23:59:59.999999")),
-        Interval(pd.Timestamp("2023-01-07T00:00:00"), pd.Timestamp("2023-01-07T23:59:59.999999")),
-        Interval(pd.Timestamp("2023-01-08T00:00:00"), pd.Timestamp("2023-01-08T19:35:11"))
-    ]
+               Interval(pd.Timestamp("2023-01-06T23:10:46"), pd.Timestamp("2023-01-06T23:59:59.999999")),
+               Interval(pd.Timestamp("2023-01-07T00:00:00"), pd.Timestamp("2023-01-07T23:59:59.999999")),
+               Interval(pd.Timestamp("2023-01-08T00:00:00"), pd.Timestamp("2023-01-08T19:35:11"))
+           ]
     # Non-working periods of more than one week
     assert absolute_unavailability_intervals_within(
         start=pd.Timestamp("2023-02-06T03:10:46"),
