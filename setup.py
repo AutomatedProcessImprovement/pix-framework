@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pix_utils',
-    version='0.6.3',
+    version='0.6.4',
     package_dir={"": "src"},
     include_package_data=True,
     install_requires=[
