@@ -212,7 +212,7 @@ def absolute_unavailability_intervals_within(
                     # Advance [current_instant] to the end of the working interval
                     current_instant = min(interval_end, end)
             # Current day finished, add non-working interval from current instant to end of day and advance
-            end_of_day = current_instant.replace(hour=23, minute=59, second=59, microsecond=999999)
+            end_of_day = current_instant.replace(hour=23, minute=59, second=59, microsecond=0) + pd.Timedelta(microseconds=999999)
             if current_instant < end:
                 non_working_intervals += [Interval(current_instant, min(end_of_day, end))]
                 current_instant = (current_instant + pd.Timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
