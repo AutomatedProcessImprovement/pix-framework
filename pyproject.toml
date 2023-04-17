@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "pix-utils"
+version = "0.6.4"
+description = "Common utilities for all PIX projects."
+authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9, <3.12"
+pandas = "^2.0.0"
+scipy = "^1.10.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
