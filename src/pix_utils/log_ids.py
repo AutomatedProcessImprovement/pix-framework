@@ -7,8 +7,8 @@ class EventLogIDs:
     case: str = 'case'  # Case ID
     activity: str = 'activity'  # Activity label
     resource: str = 'resource'  # Resource who performed this activity instance
-    start_time: str = 'start_timestamp'  # Start time of the activity instance
-    end_time: str = 'end_timestamp'  # End time of the activity instance
+    start_time: str = 'start_time'  # Start time of the activity instance
+    end_time: str = 'end_time'  # End time of the activity instance
     # Start time estimator
     enabled_time: str = 'enabled_time'  # Enablement time of the activity instance
     enabling_activity: str = 'enabling_activity'  # Label of the activity instance enabling the current one
@@ -33,3 +33,16 @@ DEFAULT_XES_IDS = EventLogIDs(case='case:concept:name',
                               available_time='time:available',
                               estimated_start_time='time:estimated_start',
                               resource='org:resource')
+
+APROMORE_IDS = EventLogIDs(case='Case_ID',
+                           activity='Activity',
+                           start_time='Start_Time',
+                           end_time='End_Time',
+                           resource='Resource')
+
+PROSIMOS_IDS = EventLogIDs(case='case_id',
+                           activity='activity',
+                           enabled_time='enabled_time',
+                           start_time='start_time',
+                           end_time='end_time',
+                           resource='resource')
