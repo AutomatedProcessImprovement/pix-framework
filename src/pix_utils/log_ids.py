@@ -34,15 +34,15 @@ DEFAULT_XES_IDS = EventLogIDs(case='case:concept:name',
                               estimated_start_time='time:estimated_start',
                               resource='org:resource')
 
-APROMORE_IDS = EventLogIDs(case='Case_ID',
-                           activity='Activity',
-                           start_time='Start_Time',
-                           end_time='End_Time',
-                           resource='Resource')
+APROMORE_LOG_IDS = EventLogIDs(case='Case_ID',
+                               activity='Activity',
+                               start_time='Start_Time',
+                               end_time='End_Time',
+                               resource='Resource')
 
-PROSIMOS_IDS = EventLogIDs(case='case_id',
-                           activity='activity',
-                           enabled_time='enabled_time',
-                           start_time='start_time',
-                           end_time='end_time',
-                           resource='resource')
+PROSIMOS_LOG_IDS = EventLogIDs(case='case_id',
+                               activity='activity',
+                               enabled_time='enabled_time',
+                               start_time='start_time',
+                               end_time='end_time',
+                               resource='resource')
