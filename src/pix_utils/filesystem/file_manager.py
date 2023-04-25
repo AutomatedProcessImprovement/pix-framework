@@ -5,10 +5,6 @@ import uuid
 from pathlib import Path
 
 
-def get_project_dir() -> Path:
-    return Path(os.path.dirname(__file__)).parent.parent
-
-
 def get_random_folder_id(prefix: str = '') -> str:
     return f'{prefix}{get_random_id()}'
 
