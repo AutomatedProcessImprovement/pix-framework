@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pix-utils"
-version = "0.6.5"
+version = "0.6.6"
 description = "Common utilities for all PIX projects."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
