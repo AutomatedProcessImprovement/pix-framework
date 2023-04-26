@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 
 @dataclass
@@ -14,6 +14,16 @@ class EventLogIDs:
     enabling_activity: str = 'enabling_activity'  # Label of the activity instance enabling the current one
     available_time: str = 'available_time'  # Last availability time of the resource who performed this activity instance
     estimated_start_time: str = 'estimated_start_time'  # Estimated start time of the activity instance
+
+    @staticmethod
+    def from_dict(config: dict) -> 'EventLogIDs':
+        return EventLogIDs(**config)
+
+    def to_dict(self) -> dict:
+        return {
+            attr.name: getattr(self, attr.name)
+            for attr in fields(self.__class__)
+        }
 
 
 DEFAULT_CSV_IDS = EventLogIDs(case='case_id',
