@@ -3,34 +3,34 @@ import random
 import numpy as np
 import scipy.stats as st
 
-from pix_utils.statistics.distribution import get_best_fitting_distribution, DurationDistribution
+from pix_utils.statistics.distribution import get_best_fitting_distribution, DurationDistribution, DistributionType
 
 
 def test_infer_distribution_fixed():
     data = [150] * 1000
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name == "fix"
+    assert distribution.type == DistributionType.FIXED
     assert distribution.mean == 150.0
 
 
 def test_infer_distribution_fixed_with_noise():
     data = [149] * 100 + [150] * 1000 + [151] * 100 + [200] * 5
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name == "fix"
+    assert distribution.type == DistributionType.FIXED
     assert distribution.mean == 150.0
 
 
 def test_infer_distribution_not_fixed():
     data = [147] * 28 + [150] * 26 + [151] * 32 + [240] * 14
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name != "fix"
+    assert distribution.type != DistributionType.FIXED
 
 
 def test_infer_distribution_normal():
     distribution = st.norm(loc=100, scale=20)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name == "norm"
+    assert distribution.type == DistributionType.NORMAL
     _assert_distribution_params(distribution, data)
 
 
@@ -38,7 +38,7 @@ def test_infer_distribution_exponential():
     distribution = st.expon(loc=2, scale=700)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name in ["expon", "gamma", "lognorm"]
+    assert distribution.type in [DistributionType.EXPONENTIAL, DistributionType.GAMMA, DistributionType.LOG_NORMAL]
     _assert_distribution_params(distribution, data)
 
 
@@ -46,7 +46,7 @@ def test_infer_distribution_uniform():
     distribution = st.uniform(loc=600, scale=120)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name == "uniform"
+    assert distribution.type == DistributionType.UNIFORM
     _assert_distribution_params(distribution, data)
 
 
@@ -54,7 +54,7 @@ def test_infer_distribution_log_normal():
     distribution = st.lognorm(s=0.5, loc=600, scale=300)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name in ["lognorm", "expon", "gamma"]
+    assert distribution.type in [DistributionType.LOG_NORMAL, DistributionType.EXPONENTIAL, DistributionType.GAMMA]
     _assert_distribution_params(distribution, data)
 
 
@@ -62,7 +62,7 @@ def test_infer_distribution_gamma():
     distribution = st.gamma(a=0.7, loc=600, scale=300)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.name in ["gamma", "lognorm", "expon"]
+    assert distribution.type in [DistributionType.GAMMA, DistributionType.LOG_NORMAL, DistributionType.EXPONENTIAL]
     _assert_distribution_params(distribution, data)
 
 
@@ -86,7 +86,7 @@ def test_scale_distributions():
     for distribution in distributions:
         alpha = random.randrange(1, 500) / 100
         scaled = distribution.scale_distribution(alpha)
-        assert scaled.name == distribution.name
+        assert scaled.type == distribution.type
         assert scaled.mean == distribution.mean * alpha
         assert scaled.var == distribution.var * alpha * alpha
         assert scaled.std == distribution.std * alpha
