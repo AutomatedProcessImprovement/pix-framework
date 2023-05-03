@@ -38,7 +38,7 @@ DEFAULT_CSV_IDS = EventLogIDs(case='case_id',
 DEFAULT_XES_IDS = EventLogIDs(case='case:concept:name',
                               activity='concept:name',
                               enabled_time='time:enabled',
-                              start_time='start_timestamp',
+                              start_time='start_timestamp',  # Compatibility with PM4PY
                               end_time='time:timestamp',
                               available_time='time:available',
                               estimated_start_time='time:estimated_start',
