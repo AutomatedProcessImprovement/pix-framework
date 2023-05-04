@@ -9,6 +9,8 @@ import numpy as np
 import scipy.stats as st
 from scipy.stats import wasserstein_distance
 
+from pix_utils.statistics.utils import remove_outliers
+
 
 class DistributionType(Enum):
     UNIFORM = "uniform"
@@ -217,17 +219,17 @@ class DurationDistribution:
         )
 
 
-def get_best_fitting_distribution(data: list, remove_outliers: bool = False) -> DurationDistribution:
+def get_best_fitting_distribution(data: list, filter_outliers: bool = False) -> DurationDistribution:
     """
     Discover the distribution (exponential, normal, uniform, log-normal, and gamma) that best fits the values in [data].
 
     :param data:            Values to fit a distribution for.
-    :param remove_outliers: If true, remove outliers from the sample.
+    :param filter_outliers: If true, remove outliers from the sample.
 
     :return: the best fitting distribution.
     """
     # Filter outliers
-    filtered_data = _reject_outliers(data) if remove_outliers else data
+    filtered_data = remove_outliers(data) if filter_outliers else data
     # Check for fixed value
     fix_value = _check_fix(filtered_data)
     if fix_value is not None:
@@ -268,15 +270,6 @@ def get_best_fitting_distribution(data: list, remove_outliers: bool = False) -> 
     return distribution
 
 
-def _reject_outliers(data, m=8.):
-    # https://stackoverflow.com/a/16562028
-    data = np.asarray(data)
-    d = np.abs(data - np.median(data))
-    mdev = np.median(d)
-    s = d / mdev if mdev else 0.
-    return data[s < m]
-
-
 def _check_fix(data_list, delta=5):
     value = None
     counter = Counter(data_list)
@@ -292,18 +285,18 @@ def _check_fix(data_list, delta=5):
     return value
 
 
-def get_observations_histogram(data: list, num_bins: int = 20, remove_outliers: bool = False) -> dict:
+def get_observations_histogram(data: list, num_bins: int = 20, filter_outliers: bool = False) -> dict:
     """
     Build a histogram with the values in [data], with [num_bins] bins. It builds the histogram, computes the CDF and the values of each
     bin of the CDF.
 
     :param data:            Data to build the histogram.
     :param num_bins:        Number of bins to use in the histogram.
-    :param remove_outliers: If true, remove outliers from the sample.
+    :param filter_outliers: If true, remove outliers from the sample.
 
     :return: A dict with the histogram in Prosimos format, storing the CDF values and middle points.
     """
-    filtered_durations = _reject_outliers(data) if remove_outliers else data
+    filtered_durations = remove_outliers(data) if filter_outliers else data
     bins = np.linspace(min(filtered_durations), max(filtered_durations), num_bins + 1)
     hist, _ = np.histogram(filtered_durations, bins=bins)
     cdf = np.cumsum(hist)
