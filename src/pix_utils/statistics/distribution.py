@@ -270,12 +270,12 @@ def get_best_fitting_distribution(data: list, filter_outliers: bool = False) -> 
     return distribution
 
 
-def _check_fix(data_list, delta=5):
+def _check_fix(data:list, delta=5):
     value = None
-    counter = Counter(data_list)
+    counter = Counter(data)
     counter[None] = 0
     for d1 in counter:
-        if (counter[d1] > counter[value]) and (sum([abs(d1 - d2) < delta for d2 in data_list]) / len(data_list) > 0.95):
+        if (counter[d1] > counter[value]) and (sum([abs(d1 - d2) < delta for d2 in data]) / len(data) > 0.95):
             # If the value [d1] is more frequent than the current fixed one [value]
             # and
             # the ratio of values similar (or with a difference lower than [delta]) to [d1] is more than 90%

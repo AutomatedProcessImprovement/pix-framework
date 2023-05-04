@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def remove_outliers(data, m=5.):
+def remove_outliers(data:list, m=5.) -> list:
     """
     Remove outliers from a list of values following the approach presented in https://stackoverflow.com/a/16562028.
     :param data: list of values.
@@ -18,4 +18,4 @@ def remove_outliers(data, m=5.):
     # Compute the ratio between each distance and the median of distances
     s = d / mdev if mdev else 0.0
     # Keep values with a ratio lower than the specified threshold
-    return data[s < m]
+    return data[s < m].tolist()
