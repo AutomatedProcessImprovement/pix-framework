@@ -1,7 +1,7 @@
 import pandas as pd
 import pytz
 
-from pix_utils.calendar.resource_calendar import RCalendar, Interval, get_last_available_timestamp, absolute_unavailability_intervals_within
+from pix_framework.calendar.resource_calendar import RCalendar, Interval, get_last_available_timestamp, absolute_unavailability_intervals_within
 
 _def_tz = pytz.timezone('UTC')
 
