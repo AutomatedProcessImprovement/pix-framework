@@ -1,22 +1,38 @@
-# -------------------- Calendar class and utils ------------------- #
-# The main structures have been copied and simplified from Prosimos #
-# project (https://github.com/AutomatedProcessImprovement/Prosimos/blob/main/bpdfr_simulation_engine/resource_calendar.py).
-# ----------------------------------------------------------------- #
+"""
+The main structures have been copied and simplified from Prosimos project
+(https://github.com/AutomatedProcessImprovement/Prosimos/blob/main/bpdfr_simulation_engine/resource_calendar.py).
+"""
 from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
 import pytz
 
-str_week_days = {"MONDAY": 0, "TUESDAY": 1, "WEDNESDAY": 2, "THURSDAY": 3, "FRIDAY": 4, "SATURDAY": 5, "SUNDAY": 6}
-int_week_days = {0: "MONDAY", 1: "TUESDAY", 2: "WEDNESDAY", 3: "THURSDAY", 4: "FRIDAY", 5: "SATURDAY", 6: "SUNDAY"}
+str_week_days = {
+    "MONDAY": 0,
+    "TUESDAY": 1,
+    "WEDNESDAY": 2,
+    "THURSDAY": 3,
+    "FRIDAY": 4,
+    "SATURDAY": 5,
+    "SUNDAY": 6,
+}
+int_week_days = {
+    0: "MONDAY",
+    1: "TUESDAY",
+    2: "WEDNESDAY",
+    3: "THURSDAY",
+    4: "FRIDAY",
+    5: "SATURDAY",
+    6: "SUNDAY",
+}
 
 conversion_table = {
-    'WEEKS': 604800,
-    'DAYS': 86400,
-    'HOURS': 3600,
-    'MINUTES': 60,
-    'SECONDS': 1
+    "WEEKS": 604800,
+    "DAYS": 86400,
+    "HOURS": 3600,
+    "MINUTES": 60,
+    "SECONDS": 1,
 }
 
 
@@ -35,7 +51,7 @@ class Interval:
         else:
             return False
 
-    def merge_interval(self, n_interval: 'Interval'):
+    def merge_interval(self, n_interval: "Interval"):
         self.start = min(n_interval.start, self.start)
         self.end = max(n_interval.end, self.end)
         self.duration = (self.end - self.start).total_seconds()
@@ -54,12 +70,14 @@ class RCalendar:
         for i in range(0, 7):
             if len(self.work_intervals[i]) > 0:
                 for interval in self.work_intervals[i]:
-                    items.append({
-                        'from': int_week_days[i],
-                        'to': int_week_days[i],
-                        "beginTime": str(interval.start.time()),
-                        "endTime": str(interval.end.time())
-                    })
+                    items.append(
+                        {
+                            "from": int_week_days[i],
+                            "to": int_week_days[i],
+                            "beginTime": str(interval.start.time()),
+                            "endTime": str(interval.end.time()),
+                        }
+                    )
         # Return list with working schedule
         return items
 
@@ -83,12 +101,18 @@ class RCalendar:
                 return
         self.work_intervals[w_day].insert(i, interval)
 
-    def add_calendar_item(self, from_day: str, to_day: str, begin_time: str, end_time: str):
+    def add_calendar_item(
+        self, from_day: str, to_day: str, begin_time: str, end_time: str
+    ):
         if from_day.upper() in str_week_days and to_day.upper() in str_week_days:
             try:
                 t_interval = Interval(
-                    start=pd.Timestamp.combine(self.default_date, pd.Timestamp(begin_time).time()),
-                    end=pd.Timestamp.combine(self.default_date, pd.Timestamp(end_time).time())
+                    start=pd.Timestamp.combine(
+                        self.default_date, pd.Timestamp(begin_time).time()
+                    ),
+                    end=pd.Timestamp.combine(
+                        self.default_date, pd.Timestamp(end_time).time()
+                    ),
                 )
                 d_s = str_week_days[from_day.upper()]
                 d_e = str_week_days[to_day.upper()]
@@ -101,7 +125,9 @@ class RCalendar:
                 return
 
 
-def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar) -> pd.Timestamp:
+def get_last_available_timestamp(
+    start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar
+) -> pd.Timestamp:
     """
     Get the timestamp [last_available] within the interval from [start] to [end] (i.e. [start] <= [last_available] <= [end]) such that
     the interval from [last_available] to [end] is the largest and all of it is in the working hours in the calendar [schedule].
@@ -124,10 +150,16 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
         for interval in reversed(day_intervals):
             # Move interval to current day
             interval_start = interval.start.replace(
-                day=last_available.day, month=last_available.month, year=last_available.year, tzinfo=pytz.timezone('UTC')
+                day=last_available.day,
+                month=last_available.month,
+                year=last_available.year,
+                tzinfo=pytz.timezone("UTC"),
             )
             interval_end = interval.end.replace(
-                day=last_available.day, month=last_available.month, year=last_available.year, tzinfo=pytz.timezone('UTC')
+                day=last_available.day,
+                month=last_available.month,
+                year=last_available.year,
+                tzinfo=pytz.timezone("UTC"),
             )
             if interval_end < last_available:
                 # The last available is later than the end of the current working interval
@@ -136,10 +168,10 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
                     found = True
                     # Correct jump to previous day if needed
                     if (
-                            last_available.hour == 23 and
-                            last_available.minute == 59 and
-                            last_available.second == 59 and
-                            last_available.microsecond == 999999
+                        last_available.hour == 23
+                        and last_available.minute == 59
+                        and last_available.second == 59
+                        and last_available.microsecond == 999999
                     ):
                         last_available = last_available + pd.Timedelta(microseconds=1)
                 else:
@@ -148,7 +180,7 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
                         hour=interval_start.hour,
                         minute=interval_start.minute,
                         second=interval_start.second,
-                        microsecond=interval_start.microsecond
+                        microsecond=interval_start.microsecond,
                     )
             elif interval_start <= last_available <= interval_end:
                 # The last available timestamp is within the current interval
@@ -156,16 +188,20 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
                     hour=interval_start.hour,
                     minute=interval_start.minute,
                     second=interval_start.second,
-                    microsecond=interval_start.microsecond
+                    microsecond=interval_start.microsecond,
                 )
         if not found:
-            start_of_day = last_available.replace(hour=00, minute=00, second=00, microsecond=0)
+            start_of_day = last_available.replace(
+                hour=00, minute=00, second=00, microsecond=0
+            )
             if (last_available - start_of_day) > pd.Timedelta(seconds=2):
                 # Non-working interval between last_available and the start of the day
                 found = True
             else:
                 # Move to previous day at 23:59:59.999999
-                last_available = (last_available - pd.Timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=999999)
+                last_available = (last_available - pd.Timedelta(days=1)).replace(
+                    hour=23, minute=59, second=59, microsecond=999999
+                )
         # If last_available moved previously to the start of the queried interval
         if last_available <= start:
             # Stop and set to the start of the queried interval
@@ -176,9 +212,7 @@ def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedul
 
 
 def absolute_unavailability_intervals_within(
-        start: pd.Timestamp,
-        end: pd.Timestamp,
-        schedule: RCalendar
+    start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar
 ) -> List[Interval]:
     """
     Compute the list of intervals (in absolute timestamps) from [start] to [end] where, based on the working intervals in [schedule], the
@@ -200,21 +234,35 @@ def absolute_unavailability_intervals_within(
             for interval in day_intervals:
                 # Move interval to current day
                 interval_start = interval.start.replace(
-                    day=current_instant.day, month=current_instant.month, year=current_instant.year, tzinfo=pytz.timezone('UTC')
+                    day=current_instant.day,
+                    month=current_instant.month,
+                    year=current_instant.year,
+                    tzinfo=pytz.timezone("UTC"),
                 )
                 interval_end = interval.end.replace(
-                    day=current_instant.day, month=current_instant.month, year=current_instant.year, tzinfo=pytz.timezone('UTC')
+                    day=current_instant.day,
+                    month=current_instant.month,
+                    year=current_instant.year,
+                    tzinfo=pytz.timezone("UTC"),
                 )
                 if current_instant < interval_end:
                     if current_instant < interval_start:
                         # Non-working time gap between [current_instant] and the start of the current working interval, save it
-                        non_working_intervals += [Interval(current_instant, min(interval_start, end))]
+                        non_working_intervals += [
+                            Interval(current_instant, min(interval_start, end))
+                        ]
                     # Advance [current_instant] to the end of the working interval
                     current_instant = min(interval_end, end)
             # Current day finished, add non-working interval from current instant to end of day and advance
-            end_of_day = current_instant.replace(hour=23, minute=59, second=59, microsecond=0) + pd.Timedelta(microseconds=999999)
+            end_of_day = current_instant.replace(
+                hour=23, minute=59, second=59, microsecond=0
+            ) + pd.Timedelta(microseconds=999999)
             if current_instant < end:
-                non_working_intervals += [Interval(current_instant, min(end_of_day, end))]
-                current_instant = (current_instant + pd.Timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                non_working_intervals += [
+                    Interval(current_instant, min(end_of_day, end))
+                ]
+                current_instant = (current_instant + pd.Timedelta(days=1)).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
     # Return found non-working intervals
     return non_working_intervals

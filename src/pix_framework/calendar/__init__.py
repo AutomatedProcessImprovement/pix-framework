@@ -1,1 +1,1 @@
-__all__ = ['resource_calendar']
+__all__ = ["resource_calendar"]
