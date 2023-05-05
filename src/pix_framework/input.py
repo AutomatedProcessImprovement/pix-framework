@@ -2,10 +2,15 @@ from typing import Optional
 
 import pandas as pd
 
-from pix_utils.log_ids import EventLogIDs
+from pix_framework.log_ids import EventLogIDs
 
 
-def read_csv_log(log_path, log_ids: EventLogIDs, missing_resource: Optional[str] = "NOT_SET", sort=True) -> pd.DataFrame:
+def read_csv_log(
+    log_path,
+    log_ids: EventLogIDs,
+    missing_resource: Optional[str] = "NOT_SET",
+    sort=True,
+) -> pd.DataFrame:
     """
     Read an event log from a CSV file given the column IDs in [log_ids]. Set the enabled_time, start_time, and end_time columns to date,
     set the NA resource cells to [missing_value] if not None, and sort by [end, start, enabled].
@@ -33,13 +38,22 @@ def read_csv_log(log_path, log_ids: EventLogIDs, missing_resource: Optional[str]
     # Convert timestamp value to pd.Timestamp (setting timezone to UTC)
     event_log[log_ids.end_time] = pd.to_datetime(event_log[log_ids.end_time], utc=True)
     if log_ids.start_time in event_log.columns:
-        event_log[log_ids.start_time] = pd.to_datetime(event_log[log_ids.start_time], utc=True)
+        event_log[log_ids.start_time] = pd.to_datetime(
+            event_log[log_ids.start_time], utc=True
+        )
     if log_ids.enabled_time in event_log.columns:
-        event_log[log_ids.enabled_time] = pd.to_datetime(event_log[log_ids.enabled_time], utc=True)
+        event_log[log_ids.enabled_time] = pd.to_datetime(
+            event_log[log_ids.enabled_time], utc=True
+        )
     # Sort by end time
     if sort:
-        if log_ids.start_time in event_log.columns and log_ids.enabled_time in event_log.columns:
-            event_log = event_log.sort_values([log_ids.start_time, log_ids.end_time, log_ids.enabled_time])
+        if (
+            log_ids.start_time in event_log.columns
+            and log_ids.enabled_time in event_log.columns
+        ):
+            event_log = event_log.sort_values(
+                [log_ids.start_time, log_ids.end_time, log_ids.enabled_time]
+            )
         elif log_ids.start_time in event_log.columns:
             event_log = event_log.sort_values([log_ids.start_time, log_ids.end_time])
         else:

@@ -9,7 +9,7 @@ import numpy as np
 import scipy.stats as st
 from scipy.stats import wasserstein_distance
 
-from pix_utils.statistics.utils import remove_outliers
+from pix_framework.statistics.utils import remove_outliers
 
 
 class DistributionType(Enum):

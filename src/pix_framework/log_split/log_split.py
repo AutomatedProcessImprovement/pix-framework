@@ -1,12 +1,10 @@
 import pandas as pd
 
-from pix_utils.log_ids import EventLogIDs
+from pix_framework.log_ids import EventLogIDs
 
 
 def split_log_training_validation_trace_wise(
-        event_log: pd.DataFrame,
-        log_ids: EventLogIDs,
-        training_percentage: float
+    event_log: pd.DataFrame, log_ids: EventLogIDs, training_percentage: float
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split full traces in
@@ -29,18 +27,22 @@ def split_log_training_validation_trace_wise(
         # The first traces until the size limit is met goes to the training set
         if not training_full:
             training_case_ids += [case_id]
-            training_full = len(event_log[event_log[log_ids.case].isin(training_case_ids)]) >= (training_percentage * total_events)
+            training_full = len(
+                event_log[event_log[log_ids.case].isin(training_case_ids)]
+            ) >= (training_percentage * total_events)
     # Return the two splits
-    return (event_log[event_log[log_ids.case].isin(training_case_ids)],
-            event_log[~event_log[log_ids.case].isin(training_case_ids)])
+    return (
+        event_log[event_log[log_ids.case].isin(training_case_ids)],
+        event_log[~event_log[log_ids.case].isin(training_case_ids)],
+    )
 
 
 def split_log_training_validation_event_wise(
-        event_log: pd.DataFrame,
-        log_ids: EventLogIDs,
-        training_percentage: float,
-        sort: bool = True,
-        remove_partial_traces_from_validation: bool = False
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    training_percentage: float,
+    sort: bool = True,
+    remove_partial_traces_from_validation: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split event-wise retaining the
@@ -57,7 +59,11 @@ def split_log_training_validation_event_wise(
     """
     # Sort if needed
     if sort:
-        keys = [log_ids.start_time, log_ids.end_time] if log_ids.start_time in event_log.columns else [log_ids.end_time]
+        keys = (
+            [log_ids.start_time, log_ids.end_time]
+            if log_ids.start_time in event_log.columns
+            else [log_ids.end_time]
+        )
         sorted_event_log = event_log.sort_values(keys)
     else:
         sorted_event_log = event_log
@@ -66,14 +72,24 @@ def split_log_training_validation_event_wise(
     last_training_event = sorted_event_log.head(num_train_events).iloc[-1]
     # Split the log based on the timestamp of the splitting event
     if log_ids.start_time in event_log.columns:
-        training_log = event_log[event_log[log_ids.start_time] <= last_training_event[log_ids.start_time]]
-        validation_log = event_log[event_log[log_ids.start_time] > last_training_event[log_ids.start_time]]
+        training_log = event_log[
+            event_log[log_ids.start_time] <= last_training_event[log_ids.start_time]
+        ]
+        validation_log = event_log[
+            event_log[log_ids.start_time] > last_training_event[log_ids.start_time]
+        ]
     else:
-        training_log = event_log[event_log[log_ids.end_time] <= last_training_event[log_ids.end_time]]
-        validation_log = event_log[event_log[log_ids.end_time] > last_training_event[log_ids.end_time]]
+        training_log = event_log[
+            event_log[log_ids.end_time] <= last_training_event[log_ids.end_time]
+        ]
+        validation_log = event_log[
+            event_log[log_ids.end_time] > last_training_event[log_ids.end_time]
+        ]
     # Remove from validation incomplete traces if needed
     if remove_partial_traces_from_validation:
         training_cases = training_log[log_ids.case].unique()
-        validation_log = validation_log[~validation_log[log_ids.case].isin(training_cases)]
+        validation_log = validation_log[
+            ~validation_log[log_ids.case].isin(training_cases)
+        ]
     # Return the two splits
     return training_log, validation_log

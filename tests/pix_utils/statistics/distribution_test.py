@@ -3,7 +3,11 @@ import random
 import numpy as np
 import scipy.stats as st
 
-from pix_utils.statistics.distribution import get_best_fitting_distribution, DurationDistribution, DistributionType
+from pix_framework.statistics.distribution import (
+    get_best_fitting_distribution,
+    DurationDistribution,
+    DistributionType,
+)
 
 
 def test_infer_distribution_fixed():
@@ -38,7 +42,11 @@ def test_infer_distribution_exponential():
     distribution = st.expon(loc=2, scale=700)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.type in [DistributionType.EXPONENTIAL, DistributionType.GAMMA, DistributionType.LOG_NORMAL]
+    assert distribution.type in [
+        DistributionType.EXPONENTIAL,
+        DistributionType.GAMMA,
+        DistributionType.LOG_NORMAL,
+    ]
     _assert_distribution_params(distribution, data)
 
 
@@ -54,7 +62,11 @@ def test_infer_distribution_log_normal():
     distribution = st.lognorm(s=0.5, loc=600, scale=300)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.type in [DistributionType.LOG_NORMAL, DistributionType.EXPONENTIAL, DistributionType.GAMMA]
+    assert distribution.type in [
+        DistributionType.LOG_NORMAL,
+        DistributionType.EXPONENTIAL,
+        DistributionType.GAMMA,
+    ]
     _assert_distribution_params(distribution, data)
 
 
@@ -62,7 +74,11 @@ def test_infer_distribution_gamma():
     distribution = st.gamma(a=0.7, loc=600, scale=300)
     data = distribution.rvs(size=1000)
     distribution = get_best_fitting_distribution(data)
-    assert distribution.type in [DistributionType.GAMMA, DistributionType.LOG_NORMAL, DistributionType.EXPONENTIAL]
+    assert distribution.type in [
+        DistributionType.GAMMA,
+        DistributionType.LOG_NORMAL,
+        DistributionType.EXPONENTIAL,
+    ]
     _assert_distribution_params(distribution, data)
 
 
@@ -77,11 +93,21 @@ def _assert_distribution_params(distribution, data):
 def test_scale_distributions():
     distributions = [
         DurationDistribution(name="fix", mean=60, var=0, std=0, minimum=60, maximum=60),
-        DurationDistribution(name="norm", mean=1200, var=36, std=6, minimum=1000, maximum=1400),
-        DurationDistribution(name="expon", mean=3600, var=100, std=10, minimum=1200, maximum=7200),
-        DurationDistribution(name="uniform", mean=3600, var=4000000, std=2000, minimum=0, maximum=7200),
-        DurationDistribution(name="lognorm", mean=120, var=100, std=10, minimum=100, maximum=190),
-        DurationDistribution(name="gamma", mean=1200, var=144, std=12, minimum=800, maximum=1400)
+        DurationDistribution(
+            name="norm", mean=1200, var=36, std=6, minimum=1000, maximum=1400
+        ),
+        DurationDistribution(
+            name="expon", mean=3600, var=100, std=10, minimum=1200, maximum=7200
+        ),
+        DurationDistribution(
+            name="uniform", mean=3600, var=4000000, std=2000, minimum=0, maximum=7200
+        ),
+        DurationDistribution(
+            name="lognorm", mean=120, var=100, std=10, minimum=100, maximum=190
+        ),
+        DurationDistribution(
+            name="gamma", mean=1200, var=144, std=12, minimum=800, maximum=1400
+        ),
     ]
     for distribution in distributions:
         alpha = random.randrange(1, 500) / 100
