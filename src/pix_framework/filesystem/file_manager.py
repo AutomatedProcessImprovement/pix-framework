@@ -5,12 +5,12 @@ import uuid
 from pathlib import Path
 
 
-def get_random_folder_id(prefix: str = '') -> str:
-    return f'{prefix}{get_random_id()}'
+def get_random_folder_id(prefix: str = "") -> str:
+    return f"{prefix}{get_random_id()}"
 
 
-def get_random_file_id(extension: str, prefix: str = '') -> str:
-    return f'{prefix}{get_random_id()}.{extension}'
+def get_random_file_id(extension: str, prefix: str = "") -> str:
+    return f"{prefix}{get_random_id()}.{extension}"
 
 
 def get_random_id() -> str:

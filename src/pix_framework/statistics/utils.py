@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def remove_outliers(data: list, m=5.) -> list:
+def remove_outliers(data: list, m=5.0) -> list:
     """
     Remove outliers from a list of values following the approach presented in https://stackoverflow.com/a/16562028.
     :param data: list of values.
