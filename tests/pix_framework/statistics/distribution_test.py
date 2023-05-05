@@ -32,7 +32,7 @@ def test_infer_distribution_not_fixed():
 
 def test_infer_distribution_normal():
     distribution = st.norm(loc=100, scale=20)
-    data = distribution.rvs(size=1000)
+    data = distribution.rvs(size=5000)
     distribution = get_best_fitting_distribution(data)
     assert distribution.type == DistributionType.NORMAL
     _assert_distribution_params(distribution, data)
