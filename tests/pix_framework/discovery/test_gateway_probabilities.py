@@ -13,6 +13,7 @@ from pix_framework.log_ids import EventLogIDs
 assets_dir = Path(__file__).parent.parent / "assets"
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "args",
     [
