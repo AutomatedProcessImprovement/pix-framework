@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import List, Union
 
 import pandas as pd
@@ -22,13 +21,17 @@ class PathProbability:
         )
 
     def to_dict(self):
-        """Dictionary compatible with Prosimos."""
+        """
+        Dictionary compatible with Prosimos.
+        """
         return {"path_id": self.path_id, "value": self.probability}
 
 
 @dataclass
 class GatewayProbabilities:
-    """Gateway branching probabilities for Prosimos."""
+    """
+    Gateway branching probabilities for Prosimos.
+    """
 
     gateway_id: str
     outgoing_paths: List[PathProbability]
@@ -44,28 +47,39 @@ class GatewayProbabilities:
         )
 
     def to_dict(self):
-        """Dictionary compatible with Prosimos."""
+        """
+        Dictionary compatible with Prosimos.
+        """
         return {
             "gateway_id": self.gateway_id,
             "probabilities": [p.to_dict() for p in self.outgoing_paths],
         }
 
 
-class GatewayProbabilitiesMethod(str, Enum):
+class GatewayProbabilitiesDiscoveryMethod(str, Enum):
+    """
+    Gateway probabilities discovery method. It can be either discovery or equiprobable. Equiprobable assumes that
+    all outgoing paths from a gateway have the same probability. Discovery computes the probability of each path
+    based on the BPMN model and event log.
+    """
+
     DISCOVERY = "discovery"
     EQUIPROBABLE = "equiprobable"
 
     @classmethod
     def from_str(
         cls, value: Union[str, List[str]]
-    ) -> Union["GatewayProbabilitiesMethod", List["GatewayProbabilitiesMethod"]]:
+    ) -> Union[
+        "GatewayProbabilitiesDiscoveryMethod",
+        List["GatewayProbabilitiesDiscoveryMethod"],
+    ]:
         if isinstance(value, str):
-            return GatewayProbabilitiesMethod._from_str(value)
+            return GatewayProbabilitiesDiscoveryMethod._from_str(value)
         elif isinstance(value, list):
-            return [GatewayProbabilitiesMethod._from_str(v) for v in value]
+            return [GatewayProbabilitiesDiscoveryMethod._from_str(v) for v in value]
 
     @classmethod
-    def _from_str(cls, value: str) -> "GatewayProbabilitiesMethod":
+    def _from_str(cls, value: str) -> "GatewayProbabilitiesDiscoveryMethod":
         if value.lower() == "discovery":
             return cls.DISCOVERY
         elif value.lower() == "equiprobable":
@@ -74,9 +88,9 @@ class GatewayProbabilitiesMethod(str, Enum):
             raise ValueError(f"Unknown value {value}")
 
     def __str__(self):
-        if self == GatewayProbabilitiesMethod.DISCOVERY:
+        if self == GatewayProbabilitiesDiscoveryMethod.DISCOVERY:
             return "discovery"
-        elif self == GatewayProbabilitiesMethod.EQUIPROBABLE:
+        elif self == GatewayProbabilitiesDiscoveryMethod.EQUIPROBABLE:
             return "equiprobable"
         return f"Unknown GateManagement {str(self)}"
 
@@ -84,40 +98,48 @@ class GatewayProbabilitiesMethod(str, Enum):
 def compute_gateway_probabilities(
     event_log: pd.DataFrame,
     log_ids: EventLogIDs,
-    bpmn_path: Path,
-    discovery_method: GatewayProbabilitiesMethod,
+    bpmn_graph: BPMNGraph,
+    discovery_method: GatewayProbabilitiesDiscoveryMethod = GatewayProbabilitiesDiscoveryMethod.DISCOVERY,
 ) -> List[GatewayProbabilities]:
-    # Read BPMN model
-    bpmn_graph = BPMNGraph.from_bpmn_path(bpmn_path)
-    # Discover gateway probabilities depending on the type
-    if discovery_method is GatewayProbabilitiesMethod.EQUIPROBABLE:
+    """
+    Compute the gateway probabilities for a given event log and BPMN model.
+    """
+    if discovery_method is GatewayProbabilitiesDiscoveryMethod.EQUIPROBABLE:
         gateway_probabilities = bpmn_graph.compute_equiprobable_gateway_probabilities()
-    elif discovery_method is GatewayProbabilitiesMethod.DISCOVERY:
-        # Discover the frequency of each gateway branch with replay
-        arcs_frequencies = dict()
-        for _, events in event_log.groupby(log_ids.case):
-            # Transform to list of activity labels
-            trace = events.sort_values([log_ids.start_time, log_ids.end_time])[
-                log_ids.activity
-            ].tolist()
-            # Replay updating arc frequencies
-            bpmn_graph.replay_trace(trace, arcs_frequencies)
-        # Obtain gateway path probabilities based on arc frequencies
-        gateway_probabilities = bpmn_graph.discover_gateway_probabilities(
-            arcs_frequencies
+    elif discovery_method is GatewayProbabilitiesDiscoveryMethod.DISCOVERY:
+        gateway_probabilities = discover_gateway_probabilities(
+            bpmn_graph, event_log, log_ids
         )
     else:
-        # Error, wrong method
         raise ValueError(
-            f"Only GatewayProbabilitiesMethod.DISCOVERY and GatewayProbabilitiesMethod.EQUIPROBABLE are supported, "
-            f"got {discovery_method} ({type(discovery_method)})."
+            f"Unknown gateway probabilities discovery method: {discovery_method}"
         )
 
     return _translate_to_prosimos_format(gateway_probabilities)
 
 
+def discover_gateway_probabilities(
+    bpmn_graph: BPMNGraph, event_log: pd.DataFrame, log_ids: EventLogIDs
+):
+    """
+    Discover the frequency of each gateway branch with replay.
+    """
+
+    arcs_frequencies = {}
+
+    for _, events in event_log.groupby(log_ids.case):
+        trace = events.sort_values([log_ids.start_time, log_ids.end_time])[
+            log_ids.activity
+        ].tolist()
+
+        bpmn_graph.replay_trace(trace, arcs_frequencies)
+
+    gateway_probabilities = bpmn_graph.discover_gateway_probabilities(arcs_frequencies)
+
+    return gateway_probabilities
+
+
 def _translate_to_prosimos_format(gateway_probabilities) -> List[GatewayProbabilities]:
-    # Transform to prosimos list format
     prosimos_gateway_probabilities = [
         GatewayProbabilities(
             gateway_id,
@@ -130,5 +152,5 @@ def _translate_to_prosimos_format(gateway_probabilities) -> List[GatewayProbabil
         )
         for gateway_id in gateway_probabilities
     ]
-    # Return prosimos format
+
     return prosimos_gateway_probabilities

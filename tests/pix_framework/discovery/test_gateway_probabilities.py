@@ -4,9 +4,10 @@ import pytest
 
 from pix_framework.discovery.gateway_probabilities import (
     compute_gateway_probabilities,
-    GatewayProbabilitiesMethod,
+    GatewayProbabilitiesDiscoveryMethod,
 )
 from pix_framework.input import read_csv_log
+from pix_framework.io.bpm_graph import BPMNGraph
 from pix_framework.log_ids import EventLogIDs
 
 assets_dir = Path(__file__).parent.parent / "assets"
@@ -35,9 +36,11 @@ def test_compute_gateway_probabilities(args: tuple):
 
     log = read_csv_log(log_path, log_ids)
 
+    bpmn_graph = BPMNGraph.from_bpmn_path(model_path)
+
     # Discover with equiprobable
     gateway_probabilities = compute_gateway_probabilities(
-        log, log_ids, model_path, GatewayProbabilitiesMethod.EQUIPROBABLE
+        log, log_ids, bpmn_graph, GatewayProbabilitiesDiscoveryMethod.EQUIPROBABLE
     )
 
     # Assert equiprobable probabilities
@@ -49,7 +52,7 @@ def test_compute_gateway_probabilities(args: tuple):
 
     # Discover
     gateway_probabilities = compute_gateway_probabilities(
-        log, log_ids, model_path, GatewayProbabilitiesMethod.DISCOVERY
+        log, log_ids, bpmn_graph, GatewayProbabilitiesDiscoveryMethod.DISCOVERY
     )
 
     # Assert they add up to one
