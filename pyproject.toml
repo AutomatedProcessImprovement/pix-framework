@@ -16,6 +16,7 @@ build-backend = "poetry.core.masonry.api"
 python = ">=3.9, <3.12"
 pandas = "^2.0.1"
 scipy = "^1.10.1"
+pytz = "^2023.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
