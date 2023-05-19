@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from pix_framework.calendar.simod_calendar import Calendar, Timetable
+from pix_framework.calendar.prosimos_calendar import RCalendar
 from pix_framework.discovery.calendar_factory import CalendarFactory
 from pix_framework.log_ids import EventLogIDs
 from pix_framework.statistics.distribution import (
@@ -16,33 +16,31 @@ from pix_framework.statistics.distribution import (
 @dataclass
 class CaseArrivalModel:
     """
-    Simulation model parameters containing the calendar of the case arrivals and the distribution modeling
-    the inter-arrival times.
+    Simulation model parameters containing the calendar of the case arrivals and the distribution modeling the inter-arrival times.
     """
 
-    case_arrival_calendar: Calendar
+    case_arrival_calendar: RCalendar
     inter_arrival_times: dict
 
     def to_dict(self) -> dict:
         return {
-            "arrival_time_calendar": [
-                timetable.to_dict()
-                for timetable in self.case_arrival_calendar.timetables
-            ],
+            "arrival_time_calendar": self.case_arrival_calendar.to_json(),
             "arrival_time_distribution": self.inter_arrival_times,
         }
 
     @staticmethod
     def from_dict(resource_model: dict) -> "CaseArrivalModel":
+        calendar = RCalendar(calendar_id="Arrival Calendar")
+        for timetable in resource_model["arrival_time_calendar"]:
+            calendar.add_calendar_item(
+                from_day=timetable["from"],
+                to_day=timetable["to"],
+                begin_time=timetable["beginTime"],
+                end_time=timetable["endTime"],
+            )
+
         return CaseArrivalModel(
-            case_arrival_calendar=Calendar(
-                id="Arrival Calendar",
-                name="Arrival Calendar",
-                timetables=[
-                    Timetable.from_dict(timetable)
-                    for timetable in resource_model["arrival_time_calendar"]
-                ],
-            ),
+            case_arrival_calendar=calendar,
             inter_arrival_times=resource_model["arrival_time_distribution"],
         )
 
@@ -75,8 +73,8 @@ def discover_case_arrival_model(
 
 
 def discover_case_arrival_calendar(
-    event_log: pd.DataFrame, log_ids: EventLogIDs, granularity: int = 60
-) -> Calendar:
+    event_log: pd.DataFrame, log_ids: EventLogIDs, granularity=60
+) -> RCalendar:
     """
     Discover weekly calendar for the arrival of new cases, i.e., the periods of times in each day when
     new cases arrive to the system.
@@ -90,12 +88,11 @@ def discover_case_arrival_calendar(
     """
     # Correct granularity if not divisor of 1440 (minutes in a day)
     if 1440 % granularity != 0:
-        granularity = nearest_divisor_for_granularity(
-            granularity
-        )  # TODO: make it part of CalendarFactory?
+        granularity = nearest_divisor_for_granularity(granularity)
 
+    # Create calendar discoverer and store arrivals
     calendar_factory = CalendarFactory(granularity)
-    for case_id, events in event_log.groupby(by=[log_ids.case]):
+    for case_id, events in event_log.groupby(by=log_ids.case):
         resource = "system"  # Assign all arrivals to the same resource
         activity = "case_arrival"  # Assign same activity label to all arrivals
         case_arrival = events[log_ids.start_time].min()
@@ -103,35 +100,13 @@ def discover_case_arrival_calendar(
             resource, activity, case_arrival
         )
 
+    # Discover calendar for the case arrivals
     calendars = calendar_factory.build_weekly_calendars(
         min_confidence=0.1, desired_support=0.7, min_participation=0.4
     )
 
-    calendar = (
-        Calendar(  # TODO: do we want a more general Calendar class in the framework?
-            id="Case arrival calendar",
-            name="Case arrival calendar",
-            timetables=Timetable.from_list_of_dicts(calendars["system"].to_json()),
-        )
-    )
-
+    calendar = calendars["system"]
     return calendar
-
-
-def nearest_divisor_for_granularity(granularity: int) -> int:
-    closest = 1440
-    closest_diff = abs(granularity - closest)
-    for i in range(1, int(math.sqrt(1440)) + 1):
-        if 1440 % i == 0:
-            divisor1 = i
-            divisor2 = 1440 // i
-            for divisor in [divisor1, divisor2]:
-                if divisor <= granularity:
-                    diff = granularity - divisor
-                    if diff < closest_diff:
-                        closest = divisor
-                        closest_diff = diff
-    return closest
 
 
 def discover_inter_arrival_distribution(
@@ -198,3 +173,19 @@ def _get_inter_arrival_times(
         last_arrival = arrival
     # Return list of inter-arrivals
     return inter_arrival_durations
+
+
+def nearest_divisor_for_granularity(granularity: int) -> int:
+    closest = 1440
+    closest_diff = abs(granularity - closest)
+    for i in range(1, int(math.sqrt(1440)) + 1):
+        if 1440 % i == 0:
+            divisor1 = i
+            divisor2 = 1440 // i
+            for divisor in [divisor1, divisor2]:
+                if divisor <= granularity:
+                    diff = granularity - divisor
+                    if diff < closest_diff:
+                        closest = divisor
+                        closest_diff = diff
+    return closest
