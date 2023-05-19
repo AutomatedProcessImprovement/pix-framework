@@ -24,9 +24,7 @@ class CalendarFactory:
         self.from_datetime = datetime.datetime(9999, 12, 31, tzinfo=pytz.UTC)
         self.to_datetime = datetime.datetime(1, 1, 1, tzinfo=pytz.UTC)
 
-    def register_resource_timestamp_for_activity(
-        self, resource_name, activity_name, timestamp, is_joint=False
-    ):
+    def check_date_time(self, resource_name, activity_name, timestamp, is_joint=False):
         self.kpi_calendar.register_resource_timestamp(
             resource_name, activity_name, timestamp, is_joint
         )
