@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 import pytz
 
-from pix_framework.calendar.prosimos_calendar import RCalendar, Interval
+from pix_framework.calendar.resource_calendar import RCalendar, Interval
 
 
 def get_last_available_timestamp(

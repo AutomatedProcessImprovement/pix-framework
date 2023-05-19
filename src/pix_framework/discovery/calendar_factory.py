@@ -3,7 +3,7 @@ from typing import Dict
 
 import pytz
 
-from pix_framework.calendar.prosimos_calendar import (
+from pix_framework.calendar.resource_calendar import (
     RCalendar,
     int_week_days,
     GranuleInfo,
