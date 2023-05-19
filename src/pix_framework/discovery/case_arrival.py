@@ -96,9 +96,7 @@ def discover_case_arrival_calendar(
         resource = "system"  # Assign all arrivals to the same resource
         activity = "case_arrival"  # Assign same activity label to all arrivals
         case_arrival = events[log_ids.start_time].min()
-        calendar_factory.register_resource_timestamp_for_activity(
-            resource, activity, case_arrival
-        )
+        calendar_factory.check_date_time(resource, activity, case_arrival)
 
     # Discover calendar for the case arrivals
     calendars = calendar_factory.build_weekly_calendars(
