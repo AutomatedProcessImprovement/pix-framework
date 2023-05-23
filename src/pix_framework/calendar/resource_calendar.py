@@ -517,6 +517,22 @@ class RCalendar:  # AvailabilityCalendar
 
         return items
 
+    def is_working_datetime(self, date_time):
+        c_day = date_time.date().weekday()
+        c_date = datetime.datetime.combine(self.default_date, date_time.time())
+        i_index = 0
+        for interval in self.work_intervals[c_day]:
+            if interval.contains_inclusive(c_date):
+                return True, IntervalPoint(
+                    date_time,
+                    i_index,
+                    c_day,
+                    (c_date - interval.start).total_seconds(),
+                    (interval.end - c_date).total_seconds(),
+                )
+            i_index += 1
+        return False, None
+
     def combine_calendar(self, new_calendar):
         for i in range(0, 7):
             if len(new_calendar.work_intervals[i]) > 0:
@@ -748,6 +764,23 @@ class RCalendar:  # AvailabilityCalendar
             return (to_datetime - from_datetime).total_seconds()
         else:
             return (self.work_intervals[c_day][i].end - from_datetime).total_seconds()
+
+    def print_calendar_info(self):
+        print("Calendar ID: %s" % self.calendar_id)
+        print("Total Weekly Work: %.2f Hours" % (self.total_weekly_work / 3600))
+        for i in range(0, 7):
+            if len(self.work_intervals[i]) > 0:
+                print(int_week_days[i])
+                for interval in self.work_intervals[i]:
+                    print(
+                        "    from %02d:%02d - to %02d:%02d"
+                        % (
+                            interval.start.hour,
+                            interval.start.minute,
+                            interval.end.hour,
+                            interval.end.minute,
+                        )
+                    )
 
 
 def to_seconds(value, from_unit):
