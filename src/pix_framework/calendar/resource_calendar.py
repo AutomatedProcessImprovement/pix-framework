@@ -24,7 +24,7 @@ int_week_days = {
     6: "SUNDAY",
 }
 
-convertion_table = {
+conversion_table = {
     "WEEKS": 604800,
     "DAYS": 86400,
     "HOURS": 3600,
@@ -783,6 +783,16 @@ class RCalendar:  # AvailabilityCalendar
                     )
 
 
+def build_full_time_calendar(calendar_id) -> RCalendar:
+    r_calendar = RCalendar(calendar_id)
+    for i in range(0, 7):
+        str_weekday = int_week_days[i]
+        r_calendar.add_calendar_item(
+            str_weekday, str_weekday, "00:00:00.000", "23:59:59.999"
+        )
+    return r_calendar
+
+
 def to_seconds(value, from_unit):
     u_from = from_unit.upper()
-    return value * convertion_table[u_from] if u_from in convertion_table else value
+    return value * conversion_table[u_from] if u_from in conversion_table else value
