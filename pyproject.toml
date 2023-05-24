@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "pix-framework"
-version = "0.8.7"
+version = "0.8.8"
 description = "Process Improvement Explorer Framework contains process discovery and improvement modules of the Process Improvement Explorer project."
-authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>", "Ihar Suvorau <ihar.suvorau@gmail.com>"]
-readme = "README.md"
-packages = [
-    { include = "pix_framework", from = "src" },
+authors = [
+    "David Chapela de la Campa <david.chapela.delacampa@gmail.com>",
+    "Ihar Suvorau <ihar.suvorau@gmail.com>",
 ]
+readme = "README.md"
+packages = [{ include = "pix_framework", from = "src" }]
 
 [build-system]
 requires = ["poetry-core"]
@@ -17,14 +18,14 @@ python = ">=3.9, <3.12"
 pandas = "^2.0.1"
 scipy = "^1.10.1"
 pytz = "^2023.3"
+networkx = "^3.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "unit",
-    "integration",
-    "smoke",
-]
+markers = ["unit", "integration", "smoke"]
+
+[tool.ruff]
+line-length = 120
