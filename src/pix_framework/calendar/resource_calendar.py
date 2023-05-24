@@ -376,11 +376,11 @@ class IntervalPoint:
 
 @dataclass
 class Interval:
-    start: pd.Timestamp
-    end: pd.Timestamp
+    start: datetime.datetime
+    end: datetime.datetime
     duration: float
 
-    def __init__(self, start: pd.Timestamp, end: pd.Timestamp):
+    def __init__(self, start: datetime.datetime, end: datetime.datetime):
         self.start = start
         if end < start and end.hour == 0 and end.minute == 0:
             end.replace(hour=23, minute=59, second=59, microsecond=999)
@@ -488,7 +488,7 @@ class CalendarIterator:
 class RCalendar:  # AvailabilityCalendar
     def __init__(self, calendar_id):
         self.calendar_id = calendar_id
-        self.default_date = pd.Timestamp.now().date()
+        self.default_date = None
         self.work_intervals = {}
         self.new_day = None
         self.cumulative_work_durations = {}
@@ -550,13 +550,14 @@ class RCalendar:  # AvailabilityCalendar
         if from_day.upper() in str_week_days and to_day.upper() in str_week_days:
             try:
                 t_interval = Interval(
-                    start=pd.Timestamp.combine(
-                        self.default_date, pd.Timestamp(begin_time).time()
-                    ),
-                    end=pd.Timestamp.combine(
-                        self.default_date, pd.Timestamp(end_time).time()
-                    ),
+                    start=pd.Timestamp(begin_time).to_pydatetime(),
+                    end=pd.Timestamp(end_time).to_pydatetime(),
                 )
+                if self.default_date is None:
+                    self.default_date = t_interval.start.date()
+                    self.new_day = datetime.datetime.combine(
+                        self.default_date, datetime.time()
+                    )
                 d_s = str_week_days[from_day]
                 d_e = str_week_days[to_day]
                 while True:
