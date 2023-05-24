@@ -5,7 +5,7 @@ import sys
 from collections import deque
 from enum import Enum
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 from xml.etree import ElementTree
 
 import numpy as np
@@ -302,7 +302,7 @@ class BPMNGraph:
 
     def replay_trace(
         self, task_sequence: list, f_arcs_frequency: dict, post_p=True
-    ) -> (bool, List[bool], ProcessState):
+    ) -> Tuple[bool, List[bool], ProcessState]:
         p_state = ProcessState(self)
         fired_tasks = list()
         fired_or_splits = set()
@@ -311,8 +311,8 @@ class BPMNGraph:
         pending_tasks = dict()
         for current_index in range(len(task_sequence)):
             fired_tasks.append(False)
-            # NOTE: changing self.try_firing to self.try_firing_alternative to avoid no such element
-            # in self.from_name error
+            # NOTE: changing self.try_firing to self.try_firing_alternative
+            # to avoid no such element in self.from_name error
             self.try_firing_alternative(
                 current_index,
                 current_index,
