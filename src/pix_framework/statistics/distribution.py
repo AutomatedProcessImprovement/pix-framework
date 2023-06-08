@@ -148,10 +148,9 @@ class DurationDistribution:
             distribution_params += [{"value": self.mean}]  # fixed value
         elif self.type == DistributionType.EXPONENTIAL:
             distribution_params += [
-                {"value": self.min},  # loc
-                {"value": self.mean - self.min},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.mean},   # mean
+                {"value": self.min},    # min
+                {"value": self.max},    # max
             ]
         elif self.type == DistributionType.NORMAL:
             distribution_params += [
@@ -162,10 +161,8 @@ class DurationDistribution:
             ]
         elif self.type == DistributionType.UNIFORM:
             distribution_params += [
-                {"value": self.min},  # loc
-                {"value": self.max - self.min},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.min},    # min (from)
+                {"value": self.max}     # max (to)
             ]
         elif self.type == DistributionType.LOG_NORMAL:
             # If the distribution corresponds to a 'lognorm' with loc!=0, the estimation is done wrong
