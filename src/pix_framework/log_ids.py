@@ -18,6 +18,8 @@ class EventLogIDs:
     estimated_start_time: str = (
         "estimated_start_time"  # Estimated start time of the activity instance
     )
+    batch_id: str = "batch_instance_id"  # ID of the batch instance this activity instance belongs to, if any
+    batch_type: str = "batch_instance_type"  # Type of the batch instance this activity instance belongs to, if any
 
     @staticmethod
     def from_dict(config: dict) -> "EventLogIDs":
