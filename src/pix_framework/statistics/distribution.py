@@ -7,9 +7,8 @@ from typing import Union
 
 import numpy as np
 import scipy.stats as st
-from scipy.stats import wasserstein_distance
-
 from pix_framework.statistics.utils import remove_outliers
+from scipy.stats import wasserstein_distance
 
 
 class DistributionType(Enum):
@@ -103,6 +102,29 @@ class DurationDistribution:
         # Return generated sample
         return sample
 
+
+    def generate_one_value_with_boundaries(self) -> float:
+        '''
+        Generate value following the duration distribution and
+        limit it by using min and max values
+        '''
+        while True:
+            [val] = self.generate_sample(1)
+
+            # TODO: expon does not support boundaries at the moment
+            # should be fixed
+            if self.type in [
+                DistributionType.FIXED, DistributionType.UNIFORM, DistributionType.EXPONENTIAL
+            ]:
+                # fixed and uniform distributions are not limited by min and max
+                # those limitations are already implied during value generation
+                break
+
+            if self.min <= val <= self.max:
+                break
+
+        return val
+
     def scale_distribution(self, alpha: float) -> "DurationDistribution":
         return DurationDistribution(
             name=self.type,
@@ -116,6 +138,9 @@ class DurationDistribution:
         )
 
     def to_prosimos_distribution(self) -> dict:
+        '''
+        Specifies input to Prosimos 
+        '''
         # Initialize empty list of params
         distribution_params = []
         # Add specific params depending on distribution
@@ -123,10 +148,9 @@ class DurationDistribution:
             distribution_params += [{"value": self.mean}]  # fixed value
         elif self.type == DistributionType.EXPONENTIAL:
             distribution_params += [
-                {"value": self.min},  # loc
-                {"value": self.mean - self.min},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.mean},   # mean
+                {"value": self.min},    # min
+                {"value": self.max},    # max
             ]
         elif self.type == DistributionType.NORMAL:
             distribution_params += [
@@ -137,34 +161,26 @@ class DurationDistribution:
             ]
         elif self.type == DistributionType.UNIFORM:
             distribution_params += [
-                {"value": self.min},  # loc
-                {"value": self.max - self.min},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.min},    # min (from)
+                {"value": self.max}     # max (to)
             ]
         elif self.type == DistributionType.LOG_NORMAL:
             # If the distribution corresponds to a 'lognorm' with loc!=0, the estimation is done wrong
             # dunno how to take that into account
-            pow_mean = pow(self.mean, 2)
-            phi = math.sqrt(self.var + pow_mean)
-            mu = math.log(pow_mean / phi)
-            sigma = math.sqrt(math.log(phi**2 / pow_mean))
             distribution_params += [
-                {"value": sigma},  # sigma
-                {"value": 0},  # loc
-                {"value": math.exp(mu)},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.mean},   # mean
+                {"value": self.var},    # variance
+                {"value": self.min},    # min
+                {"value": self.max},    # max
             ]
         elif self.type == DistributionType.GAMMA:
             # If the distribution corresponds to a 'gamma' with loc!=0, the estimation is done wrong
             # dunno how to take that into account
             distribution_params += [
-                {"value": pow(self.mean, 2) / self.var},  # a
-                {"value": 0},  # loc
-                {"value": self.var / self.mean},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": self.mean},   # mean
+                {"value": self.var},    # variance
+                {"value": self.min},    # min
+                {"value": self.max},    # max
             ]
         else:
             raise ValueError(f"Unsupported distribution: {self}")
@@ -209,6 +225,65 @@ class DurationDistribution:
             )
         # Return parsed distribution
         return qbp_distribution
+
+    @staticmethod
+    def from_dict(distribution_dict: dict) -> "DurationDistribution":
+        ''' 
+        Deserialize function distribution provided as a dictionary
+        '''
+        distr_name = DistributionType(distribution_dict["distribution_name"])
+        distr_params = distribution_dict["distribution_params"]
+        
+        distribution = None
+        
+        if distr_name == DistributionType.FIXED:
+            # no min and max values
+            distribution = DurationDistribution(
+                name = distr_name,
+                mean = float(distr_params[0]["value"]),
+            )
+        elif distr_name == DistributionType.EXPONENTIAL:
+            # TODO: discuss whether we need to differentiate min and scale.
+            # right now, min is used for calculating the scale
+            distribution = DurationDistribution(
+                name = distr_name,
+                mean = float(distr_params[0]["value"]),
+                minimum = float(distr_params[1]["value"]),
+                maximum = float(distr_params[2]["value"])
+            )
+        elif distr_name == DistributionType.UNIFORM:
+            distribution = DurationDistribution(
+                name = distr_name,
+                minimum = float(distr_params[0]["value"]),
+                maximum = float(distr_params[1]["value"]),
+            )
+        elif distr_name == DistributionType.NORMAL:
+            distribution = DurationDistribution(
+                name = distr_name,
+                mean = float(distr_params[0]["value"]),
+                std = float(distr_params[1]["value"]),
+                minimum = float(distr_params[2]["value"]),
+                maximum = float(distr_params[3]["value"]),
+            )
+        elif distr_name == DistributionType.LOG_NORMAL:
+            distribution = DurationDistribution(
+                name = distr_name,
+                mean = float(distr_params[0]["value"]),
+                var = float(distr_params[1]["value"]),
+                minimum = float(distr_params[2]["value"]),
+                maximum = float(distr_params[3]["value"])
+            )
+        elif distr_name == DistributionType.GAMMA:
+            distribution = DurationDistribution(
+                name = distr_name,
+                mean = float(distr_params[0]["value"]),
+                var = float(distr_params[1]["value"]),
+                minimum = float(distr_params[2]["value"]),
+                maximum = float(distr_params[3]["value"])
+            )
+
+        return distribution
+
 
     def __str__(self):
         return "DurationDistribution(name: {}, mean: {}, var: {}, std: {}, min: {}, max: {})".format(
