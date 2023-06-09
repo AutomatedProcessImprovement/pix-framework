@@ -62,8 +62,6 @@ def test_compute_gateway_probabilities(args: tuple):
         total_paths = len(gateway.outgoing_paths)
         sum_probs = 0.0
         for path in gateway.outgoing_paths:
-            assert (
-                path.probability != 1.0 / total_paths
-            )  # Don't have to hold, but it should in Purchasing Example
+            assert path.probability != 1.0 / total_paths  # Don't have to hold, but it should in Purchasing Example
             sum_probs += path.probability
         assert sum_probs == 1.0

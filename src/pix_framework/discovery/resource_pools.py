@@ -38,13 +38,9 @@ class _ResourcePoolDiscoverer:
 
         self._log = self._filter_log(log)
 
-        self.tasks = {
-            val: i for i, val in enumerate(self._log[self._activity_key].unique())
-        }
+        self.tasks = {val: i for i, val in enumerate(self._log[self._activity_key].unique())}
 
-        self.users = {
-            val: i for i, val in enumerate(self._log[self._resource_key].unique())
-        }
+        self.users = {val: i for i, val in enumerate(self._log[self._resource_key].unique())}
 
         self.roles, self.resource_table = self._discover_roles()
 
@@ -146,16 +142,12 @@ class _ResourcePoolDiscoverer:
         return records, resource_table
 
 
-def discover_resource_pools(
-    log: pd.DataFrame, log_ids: EventLogIDs
-) -> dict[str, list[str]]:
+def discover_resource_pools(log: pd.DataFrame, log_ids: EventLogIDs) -> dict[str, list[str]]:
     """
     Discover resource pools from an event log.
 
     Returns a dictionary mapping role names (pools) to lists of resource names.
     """
-    discoverer = _ResourcePoolDiscoverer(
-        log, activity_key=log_ids.activity, resource_key=log_ids.resource
-    )
+    discoverer = _ResourcePoolDiscoverer(log, activity_key=log_ids.activity, resource_key=log_ids.resource)
     df = pd.DataFrame(discoverer.resource_table)
     return df.groupby("role")["resource"].apply(list).to_dict()

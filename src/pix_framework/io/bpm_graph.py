@@ -87,9 +87,7 @@ class BPMNGraph:
         self.concurrent_enablers = dict()
         self.nodes_bitset = dict()
         self.arcs_bitset = dict()
-        self.or_join_pred = (
-            dict()
-        )  # or_id -> [0 = node predecesors bitset, 1 = predecesors flow arcs]
+        self.or_join_pred = dict()  # or_id -> [0 = node predecesors bitset, 1 = predecesors flow arcs]
         self.or_join_conflicting_pred = dict()
         self.decision_successors = dict()
         self.element_probability = None
@@ -118,15 +116,12 @@ class BPMNGraph:
                 for bpmn_element in process.findall(xmlns_key, bpmn_element_ns):
                     name = (
                         bpmn_element.attrib["name"]
-                        if "name" in bpmn_element.attrib
-                        and len(bpmn_element.attrib["name"]) > 0
+                        if "name" in bpmn_element.attrib and len(bpmn_element.attrib["name"]) > 0
                         else bpmn_element.attrib["id"]
                     )
                     bpmn_graph.add_bpmn_element(
                         bpmn_element.attrib["id"],
-                        ElementInfo(
-                            to_extract[xmlns_key], bpmn_element.attrib["id"], name
-                        ),
+                        ElementInfo(to_extract[xmlns_key], bpmn_element.attrib["id"], name),
                     )
             for flow_arc in process.findall("xmlns:sequenceFlow", bpmn_element_ns):
                 bpmn_graph.add_flow_arc(
@@ -154,9 +149,7 @@ class BPMNGraph:
     def add_flow_arc(self, flow_id, source_id, target_id):
         for node_id in [source_id, target_id]:
             if node_id not in self.element_info:
-                self.element_info[node_id] = ElementInfo(
-                    BPMNNodeType.UNDEFINED, node_id, node_id
-                )
+                self.element_info[node_id] = ElementInfo(BPMNNodeType.UNDEFINED, node_id, node_id)
         self.element_info[source_id].outgoing_flows.append(flow_id)
         self.element_info[target_id].incoming_flows.append(flow_id)
         self.flow_arcs[flow_id] = [source_id, target_id]
@@ -178,11 +171,7 @@ class BPMNGraph:
                         self.or_join_pred[e_id][0] |= self.nodes_bitset[prev_id]
                         if self.flow_arcs[flow_id][1] != e_id:
                             self.or_join_pred[e_id][1] |= self.arcs_bitset[flow_id]
-            if (
-                element.type
-                in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
-                and element.is_split()
-            ):
+            if element.type in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY] and element.is_split():
                 self._find_decision_successors(element)
 
     def _find_decision_successors(self, split_info):
@@ -205,17 +194,11 @@ class BPMNGraph:
         visited = {or_join_id}
         self.or_join_conflicting_pred[or_join_id] = set()
         for in_flow in self.element_info[or_join_id].incoming_flows:
-            self._dfs_from_or_join(
-                or_join_id, in_flow, self._get_predecessor(in_flow), visited
-            )
+            self._dfs_from_or_join(or_join_id, in_flow, self._get_predecessor(in_flow), visited)
 
     def _dfs_from_or_join(self, or_id, flow_id, e_info, visited):
         visited.add(e_info.id)
-        if (
-            e_info.type
-            in [BPMNNodeType.INCLUSIVE_GATEWAY, BPMNNodeType.EXCLUSIVE_GATEWAY]
-            and e_info.is_split()
-        ):
+        if e_info.type in [BPMNNodeType.INCLUSIVE_GATEWAY, BPMNNodeType.EXCLUSIVE_GATEWAY] and e_info.is_split():
             self.or_join_conflicting_pred[or_id].add(e_info.id)
         for in_flow in e_info.incoming_flows:
             prev_info = self._get_predecessor(in_flow)
@@ -257,10 +240,7 @@ class BPMNGraph:
                         count_tokens += 1
                 if count_tokens == len(e_info.incoming_flows):
                     return True
-                if (
-                    count_tokens > 0
-                    and self.or_join_pred[e_id][1] & p_state.state_mask == 0
-                ):
+                if count_tokens > 0 and self.or_join_pred[e_id][1] & p_state.state_mask == 0:
                     return True
                 return False
         return False
@@ -289,9 +269,7 @@ class BPMNGraph:
                     ]:
                         f_arcs = copy.deepcopy(e_info.outgoing_flows)
                     elif e_info.type is BPMNNodeType.INCLUSIVE_GATEWAY:
-                        f_arcs = self.element_probability[
-                            e_info.id
-                        ].get_multiple_flows()
+                        f_arcs = self.element_probability[e_info.id].get_multiple_flows()
                 random.shuffle(f_arcs)
             for f_arc in f_arcs:
                 self._find_next(f_arc, p_state, enabled_tasks, to_execute)
@@ -367,17 +345,11 @@ class BPMNGraph:
             self.postprocess_unfired_tasks(task_sequence, fired_tasks, f_arcs_frequency)
         return is_correct, fired_tasks, p_state.pending_tokens()
 
-    def postprocess_unfired_tasks(
-        self, task_sequence: list, fired_tasks: list, f_arcs_frequency: dict
-    ):
+    def postprocess_unfired_tasks(self, task_sequence: list, fired_tasks: list, f_arcs_frequency: dict):
         if self.closest_distance is None:
             self._sort_by_closest_predecesors()
         for i in range(0, len(fired_tasks)):
-            if (
-                not fired_tasks[i]
-                and task_sequence[i] is not None
-                and self.from_name.get(task_sequence[i])
-            ):
+            if not fired_tasks[i] and task_sequence[i] is not None and self.from_name.get(task_sequence[i]):
                 e_info = self.element_info[self.from_name.get(task_sequence[i])]
                 fix_from = [
                     self.starting_event,
@@ -385,10 +357,7 @@ class BPMNGraph:
                 ]
                 j = i - 1
                 while j >= 0:
-                    if (
-                        task_sequence[j] is None
-                        or self.from_name.get(task_sequence[j]) is None
-                    ):
+                    if task_sequence[j] is None or self.from_name.get(task_sequence[j]) is None:
                         j -= 1
                         continue
                     p_info = self.element_info[self.from_name.get(task_sequence[j])]
@@ -404,9 +373,7 @@ class BPMNGraph:
                             break
                     j -= 1
                 if fix_from[0] is not None:
-                    for flow_id in self.decision_flows_sortest_path[e_info.id][
-                        fix_from[0]
-                    ]:
+                    for flow_id in self.decision_flows_sortest_path[e_info.id][fix_from[0]]:
                         if flow_id not in f_arcs_frequency:
                             f_arcs_frequency[flow_id] = 0
                         f_arcs_frequency[flow_id] += 1
@@ -448,9 +415,7 @@ class BPMNGraph:
                             ]
                             and p_info.is_split()
                         ):
-                            self.decision_flows_sortest_path[e_id][p_id].append(
-                                pred_seq[p_info.id]
-                            )
+                            self.decision_flows_sortest_path[e_id][p_id].append(pred_seq[p_info.id])
                         p_info = self._get_successor(pred_seq[p_info.id])
 
     def try_firing(
@@ -466,12 +431,8 @@ class BPMNGraph:
     ):
         task_info = self.element_info[self.from_name[task_sequence[task_index]]]
         if not p_state.has_token(task_info.incoming_flows[0]):
-            enabled_pred, or_fired, path_decisions = self._find_enabled_predecessors(
-                task_info, p_state
-            )
-            firing_index = self.find_firing_index(
-                task_index, from_index, task_sequence, path_decisions, enabled_pred
-            )
+            enabled_pred, or_fired, path_decisions = self._find_enabled_predecessors(task_info, p_state)
+            firing_index = self.find_firing_index(task_index, from_index, task_sequence, path_decisions, enabled_pred)
             if firing_index == from_index:
                 self._fire_enabled_predecessors(
                     enabled_pred,
@@ -505,12 +466,8 @@ class BPMNGraph:
             return
         task_info = self.element_info[el_id]
         if not p_state.has_token(task_info.incoming_flows[0]):
-            enabled_pred, or_fired, path_decisions = self._find_enabled_predecessors(
-                task_info, p_state
-            )
-            firing_index = self.find_firing_index(
-                task_index, from_index, task_sequence, path_decisions, enabled_pred
-            )
+            enabled_pred, or_fired, path_decisions = self._find_enabled_predecessors(task_info, p_state)
+            firing_index = self.find_firing_index(task_index, from_index, task_sequence, path_decisions, enabled_pred)
             if firing_index == from_index:
                 self._fire_enabled_predecessors(
                     enabled_pred,
@@ -626,12 +583,8 @@ class BPMNGraph:
                     enabled_pred.appendleft(pred_id)
         return enabled_pred, closer_pred[2], closer_pred[3]
 
-    def find_firing_index(
-        self, task_index, from_index, task_sequence, path_decisions, enabled_pred
-    ):
-        is_conflicting, conflicting_gateways = self.is_conflicting_task(
-            path_decisions, enabled_pred
-        )
+    def find_firing_index(self, task_index, from_index, task_sequence, path_decisions, enabled_pred):
+        is_conflicting, conflicting_gateways = self.is_conflicting_task(path_decisions, enabled_pred)
         if is_conflicting:
             firing_index = from_index
             for i in range(from_index + 1, len(task_sequence)):
@@ -648,10 +601,7 @@ class BPMNGraph:
         conflicting_gateways = dict()
         is_conflicting = False
         for or_id in path_decisions:
-            if (
-                self.element_info[or_id].type is BPMNNodeType.INCLUSIVE_GATEWAY
-                and self.element_info[or_id].is_join()
-            ):
+            if self.element_info[or_id].type is BPMNNodeType.INCLUSIVE_GATEWAY and self.element_info[or_id].is_join():
                 conflicting_gateways[or_id] = set()
                 for enabled in enabled_pred:
                     e_info = enabled[0]
@@ -672,9 +622,7 @@ class BPMNGraph:
     ):
         visited_elements = set()
         if not enabled_pred:
-            self.try_firing_or_join(
-                enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency
-            )
+            self.try_firing_or_join(enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency)
         while enabled_pred:
             [e_info, e_flow] = enabled_pred.popleft()
             if self._is_enabled(e_info.id, p_state):
@@ -722,13 +670,9 @@ class BPMNGraph:
                                 )
             for in_flow in e_info.incoming_flows:
                 p_state.remove_token(in_flow)
-            self.try_firing_or_join(
-                enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency
-            )
+            self.try_firing_or_join(enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency)
 
-    def try_firing_or_join(
-        self, enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency
-    ):
+    def try_firing_or_join(self, enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency):
         fired = set()
         or_firing_list = list()
         for or_join_id in or_firing:
@@ -780,16 +724,12 @@ class BPMNGraph:
         p_state.add_token(flow_id)
         if not from_or:
             next_info = self._get_successor(flow_id)
-            if next_info.type is BPMNNodeType.PARALLEL_GATEWAY and self._is_enabled(
-                next_info.id, p_state
-            ):
+            if next_info.type is BPMNNodeType.PARALLEL_GATEWAY and self._is_enabled(next_info.id, p_state):
                 enabled_pred.appendleft([next_info, None])
             elif next_info.id in path_decisions:
                 if next_info.type is BPMNNodeType.INCLUSIVE_GATEWAY:
                     if next_info.is_split():
-                        enabled_pred.appendleft(
-                            [next_info, path_decisions[next_info.id]]
-                        )
+                        enabled_pred.appendleft([next_info, path_decisions[next_info.id]])
                     else:
                         if next_info.id not in or_firing:
                             or_firing[next_info.id] = 1
@@ -806,8 +746,7 @@ class BPMNGraph:
         gateways_branching = dict()
         for e_id in self.element_info:
             if (
-                self.element_info[e_id].type
-                in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
+                self.element_info[e_id].type in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
                 and len(self.element_info[e_id].outgoing_flows) > 1
             ):
                 total_frequency = 0
@@ -818,9 +757,7 @@ class BPMNGraph:
                 flow_arc_probability = dict()
                 for flow_id in self.element_info[e_id].outgoing_flows:
                     flow_arc_probability[flow_id] = (
-                        flow_arcs_frequency[flow_id] / total_frequency
-                        if total_frequency > 0
-                        else 0
+                        flow_arcs_frequency[flow_id] / total_frequency if total_frequency > 0 else 0
                     )
                 gateways_branching[e_id] = flow_arc_probability
         return gateways_branching
@@ -829,8 +766,7 @@ class BPMNGraph:
         gateways_branching = dict()
         for e_id in self.element_info:
             if (
-                self.element_info[e_id].type
-                in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
+                self.element_info[e_id].type in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
                 and len(self.element_info[e_id].outgoing_flows) > 1
             ):
                 (
@@ -839,9 +775,7 @@ class BPMNGraph:
                 ) = self._calculate_arcs_probabilities(e_id, flow_arcs_frequency)
                 # recalculate not only pure zeros, but also low probabilities
                 if min(flow_arcs_probability.values()) <= 0.005:
-                    self._recalculate_arcs_probabilities(
-                        flow_arcs_frequency, flow_arcs_probability, total_frequency
-                    )
+                    self._recalculate_arcs_probabilities(flow_arcs_frequency, flow_arcs_probability, total_frequency)
                 self._check_probabilities(flow_arcs_probability)
                 gateways_branching[e_id] = flow_arcs_probability
         return gateways_branching
@@ -850,8 +784,7 @@ class BPMNGraph:
         gateways_branching = dict()
         for e_id in self.element_info:
             if (
-                self.element_info[e_id].type
-                in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
+                self.element_info[e_id].type in [BPMNNodeType.EXCLUSIVE_GATEWAY, BPMNNodeType.INCLUSIVE_GATEWAY]
                 and len(self.element_info[e_id].outgoing_flows) > 1
             ):
                 average_probability = 1.0 / len(self.element_info[e_id].outgoing_flows)
@@ -862,30 +795,20 @@ class BPMNGraph:
         return gateways_branching
 
     @staticmethod
-    def _recalculate_arcs_probabilities(
-        flow_arcs_frequency, flow_arcs_probability, total_frequency
-    ):
+    def _recalculate_arcs_probabilities(flow_arcs_frequency, flow_arcs_probability, total_frequency):
         # recalculating probabilities because of missing arcs or very small probabilities for them
         arcs_probabilities = np.array(list(flow_arcs_probability.values()))
         valid_probability_threshold = 0.005
         min_probability = 0.01
-        number_of_invalid_arcs = (
-            arcs_probabilities <= valid_probability_threshold
-        ).sum()
+        number_of_invalid_arcs = (arcs_probabilities <= valid_probability_threshold).sum()
         number_of_valid_arcs = len(flow_arcs_probability) - number_of_invalid_arcs
-        if (
-            number_of_valid_arcs == 0
-        ):  # if all arcs are missing, we make the probability equiprobable
+        if number_of_valid_arcs == 0:  # if all arcs are missing, we make the probability equiprobable
             probability = 1.0 / float(number_of_invalid_arcs)
             for flow_id in flow_arcs_probability:
                 flow_arcs_probability[flow_id] = probability
         else:  # otherwise, we set min_probability instead of zero and balance probabilities for valid arcs
-            valid_probabilities = arcs_probabilities[
-                arcs_probabilities > valid_probability_threshold
-            ].sum()
-            extra_probability = (number_of_invalid_arcs * min_probability) - (
-                1.0 - valid_probabilities
-            )
+            valid_probabilities = arcs_probabilities[arcs_probabilities > valid_probability_threshold].sum()
+            extra_probability = (number_of_invalid_arcs * min_probability) - (1.0 - valid_probabilities)
             extra_probability_per_valid_arc = extra_probability / number_of_valid_arcs
             for flow_id in flow_arcs_probability:
                 if flow_arcs_probability[flow_id] <= valid_probability_threshold:
@@ -893,9 +816,7 @@ class BPMNGraph:
                     probability = min_probability
                 else:
                     # balancing valid probabilities
-                    probability = (
-                        flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
-                    )
+                    probability = flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
                 flow_arcs_probability[flow_id] = probability
 
     @staticmethod
@@ -904,9 +825,7 @@ class BPMNGraph:
         tolerance = 0.001
         probabilities_sum = sum(flow_arcs_probability.values())
         if 1.0 - probabilities_sum >= tolerance:
-            logger.warning(
-                f"Sum of outgoing flow arcs does not sum up to {1.0 - tolerance}: {probabilities_sum}"
-            )
+            logger.warning(f"Sum of outgoing flow arcs does not sum up to {1.0 - tolerance}: {probabilities_sum}")
 
     def _calculate_arcs_probabilities(self, e_id, flow_arcs_frequency):
         total_frequency = 0

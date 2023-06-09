@@ -69,10 +69,7 @@ class GatewayProbabilitiesDiscoveryMethod(str, Enum):
     @classmethod
     def from_str(
         cls, value: Union[str, List[str]]
-    ) -> Union[
-        "GatewayProbabilitiesDiscoveryMethod",
-        List["GatewayProbabilitiesDiscoveryMethod"],
-    ]:
+    ) -> Union["GatewayProbabilitiesDiscoveryMethod", List["GatewayProbabilitiesDiscoveryMethod"],]:
         if isinstance(value, str):
             return GatewayProbabilitiesDiscoveryMethod._from_str(value)
         elif isinstance(value, list):
@@ -107,20 +104,14 @@ def compute_gateway_probabilities(
     if discovery_method is GatewayProbabilitiesDiscoveryMethod.EQUIPROBABLE:
         gateway_probabilities = bpmn_graph.compute_equiprobable_gateway_probabilities()
     elif discovery_method is GatewayProbabilitiesDiscoveryMethod.DISCOVERY:
-        gateway_probabilities = discover_gateway_probabilities(
-            bpmn_graph, event_log, log_ids
-        )
+        gateway_probabilities = discover_gateway_probabilities(bpmn_graph, event_log, log_ids)
     else:
-        raise ValueError(
-            f"Unknown gateway probabilities discovery method: {discovery_method}"
-        )
+        raise ValueError(f"Unknown gateway probabilities discovery method: {discovery_method}")
 
     return _translate_to_prosimos_format(gateway_probabilities)
 
 
-def discover_gateway_probabilities(
-    bpmn_graph: BPMNGraph, event_log: pd.DataFrame, log_ids: EventLogIDs
-):
+def discover_gateway_probabilities(bpmn_graph: BPMNGraph, event_log: pd.DataFrame, log_ids: EventLogIDs):
     """
     Discover the frequency of each gateway branch with replay.
     """
@@ -128,9 +119,7 @@ def discover_gateway_probabilities(
     arcs_frequencies = {}
 
     for _, events in event_log.groupby(log_ids.case):
-        trace = events.sort_values([log_ids.start_time, log_ids.end_time])[
-            log_ids.activity
-        ].tolist()
+        trace = events.sort_values([log_ids.start_time, log_ids.end_time])[log_ids.activity].tolist()
 
         bpmn_graph.replay_trace(trace, arcs_frequencies)
 
@@ -144,9 +133,7 @@ def _translate_to_prosimos_format(gateway_probabilities) -> List[GatewayProbabil
         GatewayProbabilities(
             gateway_id,
             [
-                PathProbability(
-                    outgoing_node, gateway_probabilities[gateway_id][outgoing_node]
-                )
+                PathProbability(outgoing_node, gateway_probabilities[gateway_id][outgoing_node])
                 for outgoing_node in gateway_probabilities[gateway_id]
             ],
         )

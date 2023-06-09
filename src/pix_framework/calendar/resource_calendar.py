@@ -118,13 +118,8 @@ class CalendarKPIInfoFactory:
         if weekday not in self.active_res_task_weekdays[r_name][t_name]:
             self.active_res_task_weekdays[r_name][t_name][weekday] = set()
             self.active_res_task_weekdays_granules[r_name][t_name][weekday] = {}
-        if (
-            g_index
-            not in self.active_res_task_weekdays_granules[r_name][t_name][weekday]
-        ):
-            self.active_res_task_weekdays_granules[r_name][t_name][weekday][
-                g_index
-            ] = set()
+        if g_index not in self.active_res_task_weekdays_granules[r_name][t_name][weekday]:
+            self.active_res_task_weekdays_granules[r_name][t_name][weekday][g_index] = set()
         if g_index not in self.res_task_weekdays_granules_freq[r_name][t_name]:
             self.res_task_weekdays_granules_freq[r_name][t_name][g_index] = {}
         if weekday not in self.res_task_weekdays_granules_freq[r_name][t_name][g_index]:
@@ -147,9 +142,7 @@ class CalendarKPIInfoFactory:
         self.res_active_granules_weekdays[r_name][g_index][weekday].add(str_date)
         self.res_granules_frequency[r_name][g_index][weekday] += 1
 
-        self.active_res_task_weekdays_granules[r_name][t_name][weekday][g_index].add(
-            str_date
-        )
+        self.active_res_task_weekdays_granules[r_name][t_name][weekday][g_index].add(str_date)
         self.active_res_task_weekdays[r_name][t_name][weekday].add(str_date)
 
         self.resource_freq[r_name] += 1
@@ -164,9 +157,7 @@ class CalendarKPIInfoFactory:
                 self.resource_task_freq[r_name][t_name],
             )
             self.observed_weekdays[weekday].add(str_date)
-            self.max_resource_freq = max(
-                self.max_resource_freq, self.resource_freq[r_name]
-            )
+            self.max_resource_freq = max(self.max_resource_freq, self.resource_freq[r_name])
             self.task_events_count[t_name] += 1
             self.total_events_in_log += 1
 
@@ -201,22 +192,13 @@ class CalendarKPIInfoFactory:
                         joint_granules[g_index] = {}
                         self.res_enabled_task_granules[r_name][g_index] = {}
                     for weekday in self.task_enabled_in_granule[t_name][g_index]:
-                        if (
-                            weekday
-                            not in self.res_enabled_task_granules[r_name][g_index]
-                        ):
-                            self.res_enabled_task_granules[r_name][g_index][
-                                weekday
-                            ] = set()
+                        if weekday not in self.res_enabled_task_granules[r_name][g_index]:
+                            self.res_enabled_task_granules[r_name][g_index][weekday] = set()
                             joint_granules[g_index][weekday] = set()
-                        joint_granules[g_index][
-                            weekday
-                        ] |= self.task_enabled_in_granule[t_name][g_index][weekday]
+                        joint_granules[g_index][weekday] |= self.task_enabled_in_granule[t_name][g_index][weekday]
             for g_index in joint_granules:
                 for weekday in joint_granules[g_index]:
-                    self.res_enabled_task_granules[r_name][g_index][weekday] = len(
-                        joint_granules[g_index][weekday]
-                    )
+                    self.res_enabled_task_granules[r_name][g_index][weekday] = len(joint_granules[g_index][weekday])
 
     def enablement_confidence(self, r_name, weekday, g_index):
         if self.res_enabled_task_granules is None:
@@ -249,10 +231,7 @@ class CalendarKPIInfoFactory:
 
     def resource_task_participation_ratio(self, r_name, t_name):
         if self.max_resource_task_freq[t_name] > 0:
-            return (
-                self.resource_task_freq[r_name][t_name]
-                / self.max_resource_task_freq[t_name]
-            )
+            return self.resource_task_freq[r_name][t_name] / self.max_resource_task_freq[t_name]
         return 0
 
     # From all the WeekDays the resource was active, in which ration they were in the given granule
@@ -262,22 +241,16 @@ class CalendarKPIInfoFactory:
         )
 
     def support(self, r_name, weekday, g_index):
-        return len(self.res_active_granules_weekdays[r_name][g_index][weekday]) / len(
-            self.observed_weekdays[weekday]
-        )
+        return len(self.res_active_granules_weekdays[r_name][g_index][weekday]) / len(self.observed_weekdays[weekday])
 
     def weekday_support(self, r_name, weekday):
-        return len(self.res_active_weekdays[r_name][weekday]) / len(
-            self.observed_weekdays[weekday]
-        )
+        return len(self.res_active_weekdays[r_name][weekday]) / len(self.observed_weekdays[weekday])
 
     def task_coverage(self, t_name):
         return self.task_events_in_calendar[t_name] / self.task_events_count[t_name]
 
     def can_improve_support(self, r_name, weekday, g_index):
-        best_task, confidence_values = self.task_cond_confidence(
-            r_name, weekday, g_index
-        )
+        best_task, confidence_values = self.task_cond_confidence(r_name, weekday, g_index)
 
         return best_task
 
@@ -293,31 +266,21 @@ class CalendarKPIInfoFactory:
             self.confidence_numerator_sum[r_name] = 0
             self.confidence_denominator_sum[r_name] = 0
 
-    def check_accepted_granule(
-        self, r_name, weekday, g_index, best_task
-    ):  # TODO: what does it check?
-        self.res_count_events_in_calendar[r_name] += self.res_granules_frequency[
-            r_name
-        ][g_index][weekday]
-        self.total_events_in_calendar += self.res_granules_frequency[r_name][g_index][
-            weekday
-        ]
+    def check_accepted_granule(self, r_name, weekday, g_index, best_task):  # TODO: what does it check?
+        self.res_count_events_in_calendar[r_name] += self.res_granules_frequency[r_name][g_index][weekday]
+        self.total_events_in_calendar += self.res_granules_frequency[r_name][g_index][weekday]
         self.confidence_numerator_sum[r_name] += len(
             self.active_res_task_weekdays_granules[r_name][best_task][weekday][g_index]
         )
-        self.confidence_denominator_sum[r_name] += len(
-            self.active_res_task_weekdays[r_name][best_task][weekday]
-        )
-        self.active_granules_in_calendar[
-            r_name
-        ] |= self.active_res_task_weekdays_granules[r_name][best_task][weekday][g_index]
-        self.active_weekdays_in_calendar[r_name] |= self.active_res_task_weekdays[
-            r_name
-        ][best_task][weekday]
+        self.confidence_denominator_sum[r_name] += len(self.active_res_task_weekdays[r_name][best_task][weekday])
+        self.active_granules_in_calendar[r_name] |= self.active_res_task_weekdays_granules[r_name][best_task][weekday][
+            g_index
+        ]
+        self.active_weekdays_in_calendar[r_name] |= self.active_res_task_weekdays[r_name][best_task][weekday]
         for t_name in self.shared_task_granules[r_name][g_index][weekday]:
-            self.task_events_in_calendar[
-                t_name
-            ] += self.res_task_weekdays_granules_freq[r_name][t_name][g_index][weekday]
+            self.task_events_in_calendar[t_name] += self.res_task_weekdays_granules_freq[r_name][t_name][g_index][
+                weekday
+            ]
 
     def check_discarded_granule(self, r_name, weekday, g_index):
         if r_name not in self.g_discarded:
@@ -352,10 +315,8 @@ class CalendarKPIInfoFactory:
         ):
             return 0, 0
         return (
-            self.confidence_numerator_sum[r_name]
-            / self.confidence_denominator_sum[r_name],
-            self.res_count_events_in_calendar[r_name]
-            / self.res_count_events_in_log[r_name],
+            self.confidence_numerator_sum[r_name] / self.confidence_denominator_sum[r_name],
+            self.res_count_events_in_calendar[r_name] / self.res_count_events_in_log[r_name],
         )
 
 
@@ -368,10 +329,7 @@ class IntervalPoint:
         self.to_end_dist = to_end_dist
 
     def in_same_interval(self, another_point):
-        return (
-            self.week_day == another_point.week_day
-            and self.index == another_point.index
-        )
+        return self.week_day == another_point.week_day and self.index == another_point.index
 
 
 @dataclass
@@ -413,13 +371,9 @@ class Interval:
     def intersection(self, interval):
         if interval is None:
             return None
-        [first_i, second_i] = (
-            [self, interval] if self.start <= interval.start else [interval, self]
-        )
+        [first_i, second_i] = [self, interval] if self.start <= interval.start else [interval, self]
         if second_i.start < first_i.end:
-            return Interval(
-                max(first_i.start, second_i.start), min(first_i.end, second_i.end)
-            )
+            return Interval(max(first_i.start, second_i.start), min(first_i.end, second_i.end))
         return None
 
 
@@ -431,22 +385,16 @@ class CalendarIterator:
 
         self.c_day = start_date.date().weekday()
 
-        c_date = datetime.datetime.combine(
-            calendar_info.default_date, start_date.time()
-        )
+        c_date = datetime.datetime.combine(calendar_info.default_date, start_date.time())
         c_interval = calendar_info.work_intervals[self.c_day][0]
         self.c_index = -1
-        while (
-            c_interval.end < c_date
-            and self.c_index < len(calendar_info.work_intervals[self.c_day]) - 1
-        ):
+        while c_interval.end < c_date and self.c_index < len(calendar_info.work_intervals[self.c_day]) - 1:
             self.c_index += 1
             c_interval = calendar_info.work_intervals[self.c_day][self.c_index]
 
         self.c_interval = Interval(
             self.start_date,
-            self.start_date
-            + timedelta(seconds=(c_interval.end - c_date).total_seconds()),
+            self.start_date + timedelta(seconds=(c_interval.end - c_date).total_seconds()),
         )
 
     def next_working_interval(self):
@@ -456,31 +404,21 @@ class CalendarIterator:
 
         self.c_index += 1
         if self.c_index >= len(day_intervals):
-            p_duration += (
-                86400
-                - (
-                    day_intervals[self.c_index - 1].end - self.calendar.new_day
-                ).total_seconds()
-            )
+            p_duration += 86400 - (day_intervals[self.c_index - 1].end - self.calendar.new_day).total_seconds()
             while True:
                 self.c_day = (self.c_day + 1) % 7
                 day_intervals = self.calendar.work_intervals[self.c_day]
                 if len(day_intervals) > 0:
-                    p_duration += (
-                        day_intervals[0].start - self.calendar.new_day
-                    ).total_seconds()
+                    p_duration += (day_intervals[0].start - self.calendar.new_day).total_seconds()
                     break
                 else:
                     p_duration += 86400
             self.c_index = 0
         elif self.c_index > 0:
-            p_duration += (
-                day_intervals[self.c_index].start - day_intervals[self.c_index - 1].end
-            ).total_seconds()
+            p_duration += (day_intervals[self.c_index].start - day_intervals[self.c_index - 1].end).total_seconds()
         self.c_interval = Interval(
             res_interval.end + timedelta(seconds=p_duration),
-            res_interval.end
-            + timedelta(seconds=p_duration + day_intervals[self.c_index].duration),
+            res_interval.end + timedelta(seconds=p_duration + day_intervals[self.c_index].duration),
         )
         return res_interval
 
@@ -544,9 +482,7 @@ class RCalendar:  # AvailabilityCalendar
                         str(interval.end.time()),
                     )
 
-    def add_calendar_item(
-        self, from_day: str, to_day: str, begin_time: str, end_time: str
-    ):
+    def add_calendar_item(self, from_day: str, to_day: str, begin_time: str, end_time: str):
         if from_day.upper() in str_week_days and to_day.upper() in str_week_days:
             try:
                 t_interval = Interval(
@@ -555,9 +491,7 @@ class RCalendar:  # AvailabilityCalendar
                 )
                 if self.default_date is None:
                     self.default_date = t_interval.start.date()
-                    self.new_day = datetime.datetime.combine(
-                        self.default_date, datetime.time()
-                    )
+                    self.new_day = datetime.datetime.combine(self.default_date, datetime.time())
                 d_s = str_week_days[from_day]
                 d_e = str_week_days[to_day]
                 while True:
@@ -632,9 +566,7 @@ class RCalendar:  # AvailabilityCalendar
         c_day = requested_date.date().weekday()
         c_date = datetime.datetime.combine(self.default_date, requested_date.time())
 
-        worked_time, total_time = self._find_time_starting(
-            pending_duration, c_day, c_date
-        )
+        worked_time, total_time = self._find_time_starting(pending_duration, c_day, c_date)
         if worked_time > total_time and worked_time - total_time < 0.001:
             total_time = worked_time
         pending_duration -= worked_time
@@ -647,9 +579,7 @@ class RCalendar:  # AvailabilityCalendar
                 pending_duration -= self.work_rest_count[r_d][0]
                 real_duration += 86400
             else:
-                real_duration += self._find_time_completion(
-                    pending_duration, self.work_rest_count[r_d][0], r_d, c_date
-                )
+                real_duration += self._find_time_completion(pending_duration, self.work_rest_count[r_d][0], r_d, c_date)
                 break
         return real_duration
 
@@ -675,12 +605,7 @@ class RCalendar:  # AvailabilityCalendar
         for i in range(c_day + 1, c_day + 8):
             r_day = i % 7
             if self.work_rest_count[r_day][0] > 0:
-                return (
-                    duration
-                    + (
-                        self.work_intervals[r_day][0].start - self.new_day
-                    ).total_seconds()
-                )
+                return duration + (self.work_intervals[r_day][0].start - self.new_day).total_seconds()
             duration += 86400
         return duration
 
@@ -729,9 +654,7 @@ class RCalendar:  # AvailabilityCalendar
                 86400 - (from_date - self.new_day).total_seconds(),
             )
         else:
-            return pending_duration, self._find_time_completion(
-                pending_duration, available_duration, c_day, from_date
-            )
+            return pending_duration, self._find_time_completion(pending_duration, available_duration, c_day, from_date)
 
     def _calculate_available_duration(self, c_day, from_date):
         i = -1
@@ -744,16 +667,12 @@ class RCalendar:  # AvailabilityCalendar
             if t_interval.is_after(from_date):
                 break
             if t_interval.contains(from_date):
-                passed_duration += (
-                    from_date - self.work_intervals[c_day][i].start
-                ).total_seconds()
+                passed_duration += (from_date - self.work_intervals[c_day][i].start).total_seconds()
                 break
 
         return self.work_rest_count[c_day][0] - passed_duration
 
-    def _find_time_completion(
-        self, pending_duration, total_duration, c_day, from_datetime
-    ):
+    def _find_time_completion(self, pending_duration, total_duration, c_day, from_datetime):
         i = len(self.work_intervals[c_day]) - 1
         while total_duration > pending_duration:
             total_duration -= self.work_intervals[c_day][i].duration
@@ -788,9 +707,7 @@ def build_full_time_calendar(calendar_id) -> RCalendar:
     r_calendar = RCalendar(calendar_id)
     for i in range(0, 7):
         str_weekday = int_week_days[i]
-        r_calendar.add_calendar_item(
-            str_weekday, str_weekday, "00:00:00.000", "23:59:59.999"
-        )
+        r_calendar.add_calendar_item(str_weekday, str_weekday, "00:00:00.000", "23:59:59.999")
     return r_calendar
 
 

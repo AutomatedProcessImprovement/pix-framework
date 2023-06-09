@@ -11,13 +11,11 @@ class EventLogIDs:
     end_time: str = "end_time"  # End time of the activity instance
     # Start time estimator
     enabled_time: str = "enabled_time"  # Enablement time of the activity instance
-    enabling_activity: str = (
-        "enabling_activity"  # Label of the activity instance enabling the current one
+    enabling_activity: str = "enabling_activity"  # Label of the activity instance enabling the current one
+    available_time: str = (
+        "available_time"  # Last availability time of the resource who performed this activity instance
     )
-    available_time: str = "available_time"  # Last availability time of the resource who performed this activity instance
-    estimated_start_time: str = (
-        "estimated_start_time"  # Estimated start time of the activity instance
-    )
+    estimated_start_time: str = "estimated_start_time"  # Estimated start time of the activity instance
     batch_id: str = "batch_instance_id"  # ID of the batch instance this activity instance belongs to, if any
     batch_type: str = "batch_instance_type"  # Type of the batch instance this activity instance belongs to, if any
 

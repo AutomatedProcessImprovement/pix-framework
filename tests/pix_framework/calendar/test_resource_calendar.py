@@ -53,39 +53,25 @@ def test_get_last_available_timestamp_24_7():
     # Create working calendar with 24/7
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[0] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[2] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[3] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[4] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[5] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     working_calendar.work_intervals[6] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T23:59:59"))
     ]
     # Assert that last available timestamp of any interval is its start
     start = pd.Timestamp("2020-01-20T14:15:17+00:00")
@@ -108,9 +94,7 @@ def test_get_last_available_timestamp_all_interval_within():
     # Create working calendar with one single interval in the current day
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T18:00:00")
-        )
+        Interval(pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T18:00:00"))
     ]
     # Assert that last available timestamp of any interval within the working hours is the start of the interval
     start = pd.Timestamp("2020-01-21T14:15:17+00:00")
@@ -128,97 +112,63 @@ def test_get_last_available_timestamp_within_non_24_7():
     # Create working calendar with one single interval in the current day
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T18:00:00")
-        )
+        Interval(pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T18:00:00"))
     ]
     # Assert that last available timestamp of any interval with the end within the working hours is the start of the working hours
     start = pd.Timestamp("2020-01-21T04:15:17+00:00")
     end = pd.Timestamp("2020-01-21T14:21:10+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T10:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T10:00:00+00:00")
     start = pd.Timestamp("2020-01-21T06:11:08+00:00")
     end = pd.Timestamp("2020-01-21T18:00:00+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T10:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T10:00:00+00:00")
     start = pd.Timestamp("2020-01-21T06:11:08+00:00")
     end = pd.Timestamp("2020-01-21T10:00:00+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T10:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T10:00:00+00:00")
 
     # Create working calendar with two intervals in the current day
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T08:00:00"), pd.Timestamp("2023-01-25T14:00:00")
-        ),
-        Interval(
-            pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")
-        ),
+        Interval(pd.Timestamp("2023-01-25T08:00:00"), pd.Timestamp("2023-01-25T14:00:00")),
+        Interval(pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")),
     ]
     # Assert that last available timestamp of any interval with the end within the first working hour interval is the start
     start = pd.Timestamp("2020-01-21T04:15:17+00:00")
     end = pd.Timestamp("2020-01-21T10:21:10+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T08:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T08:00:00+00:00")
     start = pd.Timestamp("2020-01-21T06:11:08+00:00")
     end = pd.Timestamp("2020-01-21T11:00:00+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T08:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T08:00:00+00:00")
     start = pd.Timestamp("2020-01-21T05:11:08+00:00")
     end = pd.Timestamp("2020-01-21T12:00:00+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T08:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T08:00:00+00:00")
 
     # Create working calendar with one single interval in the beginning of the current day and two in the previous one
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[0] = [
-        Interval(
-            pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T14:00:00")
-        ),
-        Interval(
-            pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")
-        ),
+        Interval(pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T14:00:00")),
+        Interval(pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")),
     ]
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T08:00:00")
-        )
+        Interval(pd.Timestamp("2023-01-25T00:00:00"), pd.Timestamp("2023-01-25T08:00:00"))
     ]
     # Assert that last available timestamp of any interval with the end within the working hours is the start of the working hours
     start = pd.Timestamp("2020-01-20T14:15:17+00:00")
     end = pd.Timestamp("2020-01-21T06:21:10+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T00:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T00:00:00+00:00")
     start = pd.Timestamp("2020-01-20T00:00:00+00:00")
     end = pd.Timestamp("2020-01-21T04:12:04+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T00:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T00:00:00+00:00")
     start = pd.Timestamp("2020-01-20T00:00:00+00:00")
     end = pd.Timestamp("2020-01-21T08:00:00+00:00")
-    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp(
-        "2020-01-21T00:00:00+00:00"
-    )
+    assert get_last_available_timestamp(start, end, working_calendar) == pd.Timestamp("2020-01-21T00:00:00+00:00")
 
 
 def test_get_last_available_timestamp_without():
     # Create working calendar with two intervals in the current day
     working_calendar = RCalendar("test")
     working_calendar.work_intervals[1] = [
-        Interval(
-            pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T14:00:00")
-        ),
-        Interval(
-            pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")
-        ),
+        Interval(pd.Timestamp("2023-01-25T10:00:00"), pd.Timestamp("2023-01-25T14:00:00")),
+        Interval(pd.Timestamp("2023-01-25T16:00:00"), pd.Timestamp("2023-01-25T20:00:00")),
     ]
     # Assert that last available timestamp of any interval with the end out of any working interval is the end
     start = pd.Timestamp("2020-01-21T04:15:17+00:00")
@@ -236,15 +186,9 @@ def test_absolute_unavailability_intervals_within():
     # Create working calendar with 3 working periods from Monday to Friday
     working_calendar = RCalendar("test")
     daily_calendar = [
-        Interval(
-            pd.Timestamp("2023-01-25T05:00:00"), pd.Timestamp("2023-01-25T12:00:00")
-        ),
-        Interval(
-            pd.Timestamp("2023-01-25T14:00:00"), pd.Timestamp("2023-01-25T18:00:00")
-        ),
-        Interval(
-            pd.Timestamp("2023-01-25T20:00:00"), pd.Timestamp("2023-01-25T22:00:00")
-        ),
+        Interval(pd.Timestamp("2023-01-25T05:00:00"), pd.Timestamp("2023-01-25T12:00:00")),
+        Interval(pd.Timestamp("2023-01-25T14:00:00"), pd.Timestamp("2023-01-25T18:00:00")),
+        Interval(pd.Timestamp("2023-01-25T20:00:00"), pd.Timestamp("2023-01-25T22:00:00")),
     ]
     working_calendar.work_intervals[0] = daily_calendar
     working_calendar.work_intervals[1] = daily_calendar

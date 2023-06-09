@@ -38,22 +38,13 @@ def read_csv_log(
     # Convert timestamp value to pd.Timestamp (setting timezone to UTC)
     event_log[log_ids.end_time] = pd.to_datetime(event_log[log_ids.end_time], utc=True)
     if log_ids.start_time in event_log.columns:
-        event_log[log_ids.start_time] = pd.to_datetime(
-            event_log[log_ids.start_time], utc=True
-        )
+        event_log[log_ids.start_time] = pd.to_datetime(event_log[log_ids.start_time], utc=True)
     if log_ids.enabled_time in event_log.columns:
-        event_log[log_ids.enabled_time] = pd.to_datetime(
-            event_log[log_ids.enabled_time], utc=True
-        )
+        event_log[log_ids.enabled_time] = pd.to_datetime(event_log[log_ids.enabled_time], utc=True)
     # Sort by end time
     if sort:
-        if (
-            log_ids.start_time in event_log.columns
-            and log_ids.enabled_time in event_log.columns
-        ):
-            event_log = event_log.sort_values(
-                [log_ids.start_time, log_ids.end_time, log_ids.enabled_time]
-            )
+        if log_ids.start_time in event_log.columns and log_ids.enabled_time in event_log.columns:
+            event_log = event_log.sort_values([log_ids.start_time, log_ids.end_time, log_ids.enabled_time])
         elif log_ids.start_time in event_log.columns:
             event_log = event_log.sort_values([log_ids.start_time, log_ids.end_time])
         else:
