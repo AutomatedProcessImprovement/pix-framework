@@ -1,4 +1,4 @@
-name: Build & Test
+name: Build, Test, Release
 
 on:
   workflow_dispatch:
@@ -22,6 +22,13 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.9' ]
+    environment:
+      name: PyPI
+      url: https://pypi.org/p/pix-framework
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -44,14 +51,18 @@ jobs:
         run: |
           poetry run pytest
 
-      - name: Get version
-        id: get_version
-        run: |
-          echo "version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
+      - name: Exit if not on main
+        if: github.ref != 'refs/heads/main'
+        run: exit 0
 
       - name: Build
         run: |
           poetry build
+
+      - name: Get version
+        id: get_version
+        run: |
+          echo "version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -82,5 +93,4 @@ jobs:
           body_path: CHANGELOG.md
 
       - name: Publish to PyPI
-        run: |
-          poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@release/v1
