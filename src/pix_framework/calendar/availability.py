@@ -10,9 +10,7 @@ import pytz
 from pix_framework.calendar.resource_calendar import RCalendar, Interval
 
 
-def get_last_available_timestamp(
-    start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar
-) -> pd.Timestamp:
+def get_last_available_timestamp(start: pd.Timestamp, end: pd.Timestamp, schedule: RCalendar) -> pd.Timestamp:
     """
     Get the timestamp [last_available] within the interval from [start] to [end] (i.e. [start] <= [last_available] <= [end]) such that
     the interval from [last_available] to [end] is the largest and all of it is in the working hours in the calendar [schedule].
@@ -76,9 +74,7 @@ def get_last_available_timestamp(
                     microsecond=interval_start.microsecond,
                 )
         if not found:
-            start_of_day = last_available.replace(
-                hour=00, minute=00, second=00, microsecond=0
-            )
+            start_of_day = last_available.replace(hour=00, minute=00, second=00, microsecond=0)
             if (last_available - start_of_day) > pd.Timedelta(seconds=2):
                 # Non-working interval between last_available and the start of the day
                 found = True
@@ -133,19 +129,15 @@ def absolute_unavailability_intervals_within(
                 if current_instant < interval_end:
                     if current_instant < interval_start:
                         # Non-working time gap between [current_instant] and the start of the current working interval, save it
-                        non_working_intervals += [
-                            Interval(current_instant, min(interval_start, end))
-                        ]
+                        non_working_intervals += [Interval(current_instant, min(interval_start, end))]
                     # Advance [current_instant] to the end of the working interval
                     current_instant = min(interval_end, end)
             # Current day finished, add non-working interval from current instant to end of day and advance
-            end_of_day = current_instant.replace(
-                hour=23, minute=59, second=59, microsecond=0
-            ) + pd.Timedelta(microseconds=999999)
+            end_of_day = current_instant.replace(hour=23, minute=59, second=59, microsecond=0) + pd.Timedelta(
+                microseconds=999999
+            )
             if current_instant < end:
-                non_working_intervals += [
-                    Interval(current_instant, min(end_of_day, end))
-                ]
+                non_working_intervals += [Interval(current_instant, min(end_of_day, end))]
                 current_instant = (current_instant + pd.Timedelta(days=1)).replace(
                     hour=0, minute=0, second=0, microsecond=0
                 )

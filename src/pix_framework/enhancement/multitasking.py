@@ -73,9 +73,7 @@ def _resource_metrics(log: pd.DataFrame, log_ids: EventLogIDs) -> dict:
     return {"utilization": utilization, "number_of_events": number_of_events}
 
 
-def _adjust_duration_for_resource(
-    log: pd.DataFrame, log_ids: EventLogIDs, resource: str
-):
+def _adjust_duration_for_resource(log: pd.DataFrame, log_ids: EventLogIDs, resource: str):
     resource_events = log[log[log_ids.resource] == resource]
     data = _make_custom_records(resource_events, log, log_ids)
     aux_log = _make_auxiliary_log(data)
@@ -88,9 +86,7 @@ def _make_aux_log(log, log_ids, resource):
     return _make_auxiliary_log(data)
 
 
-def _make_custom_records(
-    resource_events: pd.DataFrame, log: pd.DataFrame, log_ids: EventLogIDs
-):
+def _make_custom_records(resource_events: pd.DataFrame, log: pd.DataFrame, log_ids: EventLogIDs):
     """
     Prepares records for the Sweep Line algorithm.
     """
@@ -152,9 +148,7 @@ def _make_auxiliary_log(data: List[_CustomLogRecord]) -> List[_AuxiliaryLogRecor
     return aux_log
 
 
-def _update_end_timestamps(
-    records: List[_AuxiliaryLogRecord], log: pd.DataFrame, log_ids: EventLogIDs
-) -> pd.DataFrame:
+def _update_end_timestamps(records: List[_AuxiliaryLogRecord], log: pd.DataFrame, log_ids: EventLogIDs) -> pd.DataFrame:
     """
     Modifies end timestamp according to the adjusted durations.
     """
@@ -163,8 +157,6 @@ def _update_end_timestamps(
 
     for event_id, group in groupby(records, lambda record: record.event_id):
         duration = sum(map(lambda record: record.adjusted_duration_s, group))
-        log.at[event_id, log_ids.end_time] = log.loc[event_id][
-            log_ids.start_time
-        ] + pd.Timedelta(duration, unit="s")
+        log.at[event_id, log_ids.end_time] = log.loc[event_id][log_ids.start_time] + pd.Timedelta(duration, unit="s")
 
     return log

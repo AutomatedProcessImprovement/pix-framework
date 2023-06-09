@@ -63,18 +63,12 @@ def discover_case_arrival_model(
     :return: case arrival model.
     """
     return CaseArrivalModel(
-        case_arrival_calendar=discover_case_arrival_calendar(
-            event_log, log_ids, granularity
-        ),
-        inter_arrival_times=discover_inter_arrival_distribution(
-            event_log, log_ids, filter_outliers
-        ),
+        case_arrival_calendar=discover_case_arrival_calendar(event_log, log_ids, granularity),
+        inter_arrival_times=discover_inter_arrival_distribution(event_log, log_ids, filter_outliers),
     )
 
 
-def discover_case_arrival_calendar(
-    event_log: pd.DataFrame, log_ids: EventLogIDs, granularity=60
-) -> RCalendar:
+def discover_case_arrival_calendar(event_log: pd.DataFrame, log_ids: EventLogIDs, granularity=60) -> RCalendar:
     """
     Discover weekly calendar for the arrival of new cases, i.e., the periods of times in each day when
     new cases arrive to the system.
@@ -99,9 +93,7 @@ def discover_case_arrival_calendar(
         calendar_factory.check_date_time(resource, activity, case_arrival)
 
     # Discover calendar for the case arrivals
-    calendars = calendar_factory.build_weekly_calendars(
-        min_confidence=0.1, desired_support=0.7, min_participation=0.4
-    )
+    calendars = calendar_factory.build_weekly_calendars(min_confidence=0.1, desired_support=0.7, min_participation=0.4)
 
     calendar = calendars["system"]
     return calendar
@@ -121,9 +113,7 @@ def discover_inter_arrival_distribution(
     # Get the durations between each two consecutive arrivals
     inter_arrival_durations = _get_inter_arrival_times(event_log, log_ids)
     # Get the best distribution fitting the inter-arrival durations
-    arrival_distribution = get_best_fitting_distribution(
-        data=inter_arrival_durations, filter_outliers=filter_outliers
-    )
+    arrival_distribution = get_best_fitting_distribution(data=inter_arrival_durations, filter_outliers=filter_outliers)
     # Return it
     return arrival_distribution.to_prosimos_distribution()
 
@@ -153,9 +143,7 @@ def get_observed_inter_arrival_distribution(
     return arrival_distribution
 
 
-def _get_inter_arrival_times(
-    event_log: pd.DataFrame, log_ids: EventLogIDs
-) -> List[float]:
+def _get_inter_arrival_times(event_log: pd.DataFrame, log_ids: EventLogIDs) -> List[float]:
     # Get the arrival times from the event log
     arrival_times = []
     for case_id, events in event_log.groupby(by=log_ids.case):
