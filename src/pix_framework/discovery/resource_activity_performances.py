@@ -74,7 +74,7 @@ def discover_activity_resource_distribution(
     :return: list of duration distribution per activity and resource.
     """
     # Go over each resource profile, computing the corresponding activity durations
-    activity_resource_distributions = []
+    activity_resource_distributions = {}
     for resource_profile in resource_profiles:
         assert (
                 len(resource_profile.resources) > 0
@@ -95,17 +95,20 @@ def discover_activity_resource_distribution(
             durations = compute_activity_durations_without_off_duty(events, log_ids, calendar)
             # Compute duration distribution
             duration_distribution = get_best_fitting_distribution(durations).to_prosimos_distribution()
-            # Create empty activity-resource distribution
-            activity_resource_distribution = ActivityResourceDistribution(activity_label, [])
+            # Recover activity-resource distribution for this activity or create a new one
+            activity_resource_distribution = activity_resource_distributions.get(
+                activity_label,
+                ActivityResourceDistribution(activity_label, [])
+            )
             # Append distribution to the durations of this activity (per resource)
             for resource in resources:
                 activity_resource_distribution.activity_resources_distributions += [
                     ResourceDistribution(resource, duration_distribution)
                 ]
-            # Add resource distributions of this activity
-            activity_resource_distributions += [activity_resource_distribution]
-    # Return list of activity-resource performance
-    return activity_resource_distributions
+            # Add/Update resource distributions of this activity
+            activity_resource_distributions[activity_label] = activity_resource_distribution
+    # Return list of activity-resource performances
+    return list(activity_resource_distributions.values())
 
 
 def compute_activity_durations_without_off_duty(
