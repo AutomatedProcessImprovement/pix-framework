@@ -69,7 +69,7 @@ def test_discover_case_arrival_calendar_24_7(log_name):
     # Assert
     assert type(result) is RCalendar
     for i in range(7):
-        # Mon-Fri from 7am to 3pm
+        # Mon-Sun 24/7
         daily_work_intervals = result.work_intervals[i]
         # Only one interval
         assert len(daily_work_intervals) == 1
