@@ -7,8 +7,9 @@ from typing import Union
 
 import numpy as np
 import scipy.stats as st
-from pix_framework.statistics.utils import remove_outliers
 from scipy.stats import wasserstein_distance
+
+from pix_framework.statistics.utils import remove_outliers
 
 
 class DistributionType(Enum):
@@ -52,15 +53,15 @@ class QBPDurationDistribution:
 
 class DurationDistribution:
     def __init__(
-        self,
-        name: Union[
-            str, DistributionType
-        ] = "fix",  # supported 'fix', 'expon', 'norm', 'uniform', 'lognorm', and 'gamma'
-        mean: float = 0.0,
-        var: float = 0.0,
-        std: float = 0.0,
-        minimum: float = 0.0,
-        maximum: float = 0.0,
+            self,
+            name: Union[
+                str, DistributionType
+            ] = "fix",  # supported 'fix', 'expon', 'norm', 'uniform', 'lognorm', and 'gamma'
+            mean: float = 0.0,
+            var: float = 0.0,
+            std: float = 0.0,
+            minimum: float = 0.0,
+            maximum: float = 0.0,
     ):
         self.type = DistributionType.from_string(name) if isinstance(name, str) else name
         self.mean = mean
@@ -86,7 +87,7 @@ class DurationDistribution:
             pow_mean = pow(self.mean, 2)
             phi = math.sqrt(self.var + pow_mean)
             mu = math.log(pow_mean / phi)
-            sigma = math.sqrt(math.log(phi**2 / pow_mean))
+            sigma = math.sqrt(math.log(phi ** 2 / pow_mean))
             sample = st.lognorm.rvs(sigma, loc=0, scale=math.exp(mu), size=size)
         elif self.type == DistributionType.GAMMA:
             # If the distribution corresponds to a 'gamma' with loc!=0, the estimation is done wrong
@@ -138,39 +139,39 @@ class DurationDistribution:
         distribution_params = []
         # Add specific params depending on distribution
         if self.type == DistributionType.FIXED:
-            distribution_params += [{"value": self.mean}]  # fixed value
+            distribution_params += [{"value": float(self.mean)}]  # fixed value
         elif self.type == DistributionType.EXPONENTIAL:
             distribution_params += [
-                {"value": self.mean},  # mean
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": float(self.mean)},  # mean
+                {"value": float(self.min)},  # min
+                {"value": float(self.max)},  # max
             ]
         elif self.type == DistributionType.NORMAL:
             distribution_params += [
-                {"value": self.mean},  # loc
-                {"value": self.std},  # scale
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": float(self.mean)},  # loc
+                {"value": float(self.std)},  # scale
+                {"value": float(self.min)},  # min
+                {"value": float(self.max)},  # max
             ]
         elif self.type == DistributionType.UNIFORM:
-            distribution_params += [{"value": self.min}, {"value": self.max}]  # min (from)  # max (to)
+            distribution_params += [{"value": float(self.min)}, {"value": float(self.max)}]  # min (from)  # max (to)
         elif self.type == DistributionType.LOG_NORMAL:
             # If the distribution corresponds to a 'lognorm' with loc!=0, the estimation is done wrong
             # dunno how to take that into account
             distribution_params += [
-                {"value": self.mean},  # mean
-                {"value": self.var},  # variance
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": float(self.mean)},  # mean
+                {"value": float(self.var)},  # variance
+                {"value": float(self.min)},  # min
+                {"value": float(self.max)},  # max
             ]
         elif self.type == DistributionType.GAMMA:
             # If the distribution corresponds to a 'gamma' with loc!=0, the estimation is done wrong
             # dunno how to take that into account
             distribution_params += [
-                {"value": self.mean},  # mean
-                {"value": self.var},  # variance
-                {"value": self.min},  # min
-                {"value": self.max},  # max
+                {"value": float(self.mean)},  # mean
+                {"value": float(self.var)},  # variance
+                {"value": float(self.min)},  # min
+                {"value": float(self.max)},  # max
             ]
         else:
             raise ValueError(f"Unsupported distribution: {self}")
