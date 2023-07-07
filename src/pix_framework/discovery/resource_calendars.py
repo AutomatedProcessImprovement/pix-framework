@@ -220,7 +220,7 @@ def _discover_resource_calendars_per_profile(
     for resource_profile in resource_profiles:
         calendar_id = f"{resource_profile.id}_calendar"
         discovered_calendar = discovered_timetables.get(resource_profile.id)
-        if discovered_calendar is not None:
+        if (discovered_calendar is not None) and (not discovered_calendar.is_empty()):
             discovered_calendar.calendar_id = calendar_id
             resource_calendars += [discovered_calendar]
             _update_resource_calendars([resource_profile], calendar_id)
