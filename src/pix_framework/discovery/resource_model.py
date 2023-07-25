@@ -4,8 +4,10 @@ from typing import List
 import pandas as pd
 
 from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution, discover_activity_resource_distribution
-from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType, discover_resource_calendars_per_profile
+from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution, \
+    discover_activity_resource_distribution
+from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType, \
+    discover_resource_calendars_per_profile
 from pix_framework.discovery.resource_profiles import ResourceProfile, discover_undifferentiated_resource_profile, \
     discover_differentiated_resource_profiles, discover_pool_resource_profiles
 from pix_framework.log_ids import EventLogIDs
@@ -64,7 +66,10 @@ class ResourceModel:
 
 
 def discover_resource_model(
-        event_log: pd.DataFrame, log_ids: EventLogIDs, params: CalendarDiscoveryParams
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    params: CalendarDiscoveryParams,
+    provided_profiles: List[ResourceProfile] = None,
 ) -> ResourceModel:
     """
     Discover resource model parameters composed by the resource profiles, their calendars, and the resource-activity
@@ -74,12 +79,16 @@ def discover_resource_model(
     :param log_ids: column IDs of the event log.
     :param params: parameters for the calendar discovery composed of the calendar type (default 24/7,
     default 9/5 undifferentiated, differentiates, or pools), and, if needed, the parameters for their discovery.
+    :param provided_profiles: list of provided resource profiles to use instead of discovering them (mainly for
+    performance issues when discovering pools repeatedly).
 
     :return: class with the resource profiles, their calendars, and the resource-activity duration distributions.
     """
     # --- Discover resource profiles --- #
     calendar_type = params.discovery_type
-    if calendar_type in [CalendarType.DEFAULT_24_7, CalendarType.DEFAULT_9_5, CalendarType.UNDIFFERENTIATED]:
+    if provided_profiles is not None:
+        resource_profiles = provided_profiles  # Skipping resource profile discovery, using provided
+    elif calendar_type in [CalendarType.DEFAULT_24_7, CalendarType.DEFAULT_9_5, CalendarType.UNDIFFERENTIATED]:
         resource_profiles = [discover_undifferentiated_resource_profile(event_log, log_ids)]
     elif calendar_type == CalendarType.DIFFERENTIATED_BY_RESOURCE:
         resource_profiles = discover_differentiated_resource_profiles(event_log, log_ids)
