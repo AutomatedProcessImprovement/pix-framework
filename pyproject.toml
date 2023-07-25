@@ -22,10 +22,14 @@ networkx = "^3.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
+pytest-benchmark = "^4.0.0"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["unit", "integration", "smoke"]
+markers = ["unit", "integration", "smoke", "benchmark"]
 
 [tool.ruff]
+line-length = 120
+
+[tool.black]
 line-length = 120
