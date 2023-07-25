@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pix-framework"
-version = "0.10.6"
+version = "0.10.7"
 description = "Process Improvement Explorer Framework contains process discovery and improvement modules of the Process Improvement Explorer project."
 authors = [
     "David Chapela de la Campa <david.chapela.delacampa@gmail.com>",
@@ -23,6 +23,7 @@ networkx = "^3.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
 pytest-benchmark = "^4.0.0"
+snakeviz = "^2.2.0"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
