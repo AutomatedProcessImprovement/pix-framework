@@ -16,3 +16,21 @@ pip install pix-framework
 ## Releases
 
 You can browse compiled releases in the [Releases](https://github.com/AutomatedProcessImprovement/pix-framework/releases) section.
+
+## Development
+
+### Testing
+
+To run tests, use the following command:
+
+```shell
+pytest -m "not benchmark"
+```
+
+### Benchmarking
+
+To run benchmarks, use the following command:
+
+```shell
+pytest --benchmark-only
+```
