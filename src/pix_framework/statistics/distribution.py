@@ -99,7 +99,18 @@ class DurationDistribution:
                 size=size,
             )
         # Return generated sample
+        if sample[0] < 0:
+            sample[0] = self._replace_negative_value()
         return sample
+
+    def _replace_negative_value(self):
+        if self.mean is not None and self.mean > 0:
+            return self.mean
+        elif self.min is not None and self.max is not None:
+            s = (self.max - self.min) / 2
+            return s if s >= 0 else 0
+        else:
+            return 0
 
     def generate_one_value_with_boundaries(self) -> float:
         """
