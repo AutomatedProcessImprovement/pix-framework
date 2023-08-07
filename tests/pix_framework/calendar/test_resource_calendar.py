@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytz
 
@@ -378,3 +380,16 @@ def test_absolute_unavailability_intervals_within():
             pd.Timestamp("2023-02-15T20:00:00+00:00"),
         ),
     ]
+
+
+def test_prosimos_resource_calendar_discovery_for_bpic15():
+    from prosimos.simulation_engine import run_simulation
+
+    assets_dir = Path(__file__).parent / "assets"
+    bpmn_path = assets_dir / "BPIC15_1.bpmn"
+    json_path = assets_dir / "BPIC15_1.json"
+    total_cases = 163
+
+    result = run_simulation(str(bpmn_path), str(json_path), total_cases)
+
+    assert result is not None
