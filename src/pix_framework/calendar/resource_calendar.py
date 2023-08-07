@@ -204,8 +204,8 @@ class CalendarKPIInfoFactory:
         if self.res_enabled_task_granules is None:
             self.compute_resource_task_granule_enablement()
         return (
-                len(self.res_active_granules_weekdays[r_name][g_index][weekday])
-                / self.res_enabled_task_granules[r_name][g_index][weekday]
+            len(self.res_active_granules_weekdays[r_name][g_index][weekday])
+            / self.res_enabled_task_granules[r_name][g_index][weekday]
         )
 
     def task_cond_confidence(self, r_name, weekday, g_index):
@@ -309,9 +309,9 @@ class CalendarKPIInfoFactory:
 
     def compute_confidence_support(self, r_name):
         if (
-                r_name not in self.active_weekdays_in_calendar
-                or len(self.active_weekdays_in_calendar[r_name]) == 0
-                or self.res_count_events_in_log[r_name] == 0
+            r_name not in self.active_weekdays_in_calendar
+            or len(self.active_weekdays_in_calendar[r_name]) == 0
+            or self.res_count_events_in_log[r_name] == 0
         ):
             return 0, 0
         return (
