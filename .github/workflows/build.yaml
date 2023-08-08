@@ -51,8 +51,8 @@ jobs:
         run: |
           poetry run pytest -m "not benchmark"
 
-      - name: Exit if not on main
-        if: github.ref != 'refs/heads/main'
+      - name: Exif if pull request
+        if: github.event_name == 'pull_request'
         run: exit 0
 
       - name: Build
