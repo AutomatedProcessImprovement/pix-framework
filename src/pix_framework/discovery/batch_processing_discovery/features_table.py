@@ -3,15 +3,15 @@ import random
 import numpy as np
 import pandas as pd
 
-from .config import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 def _compute_features_table(
-        event_log: pd.DataFrame,
-        batched_instances: pd.DataFrame,
-        log_ids: EventLogIDs,
-        num_batch_ready_negative_events: int = 2,
-        num_batch_enabled_negative_events: int = 2
+    event_log: pd.DataFrame,
+    batched_instances: pd.DataFrame,
+    log_ids: EventLogIDs,
+    num_batch_ready_negative_events: int = 2,
+    num_batch_enabled_negative_events: int = 2,
 ) -> pd.DataFrame:
     """
     Create a DataFrame with the features of the batch-related events, classifying them into events that activate the batch and events
@@ -36,59 +36,45 @@ def _compute_features_table(
     #   being activated. Thus, consider them without knowing if they were thought to be a batch could hinder the rules discovery.
     # Register features for each batch instance
     features = []
-    for (key, batch_instance) in batched_instances.groupby([log_ids.batch_id]):
+    for key, batch_instance in batched_instances.groupby([log_ids.batch_id]):
         batch_instance_start = batch_instance[log_ids.start_time].min()
         # Get features of the instant activating the batch instance
         features += [
-            _get_features(
-                event_log,
-                batch_instance_start,
-                batch_instance,
-                1,  # Batch fired at this instant
-                log_ids
-            )
+            _get_features(event_log, batch_instance_start, batch_instance, 1, log_ids)  # Batch fired at this instant
         ]
         # Get features of non-activating instants
         non_activating_instants = []
         # 1 - X events in between the ready time of the batch
         batch_instance_enabled = batch_instance[log_ids.enabled_time].max()
         non_activating_instants += pd.date_range(
-            start=batch_instance_enabled,
-            end=batch_instance_start,
-            periods=num_batch_ready_negative_events + 2
+            start=batch_instance_enabled, end=batch_instance_start, periods=num_batch_ready_negative_events + 2
         )[1:-1].tolist()
         # 2 - Instants per enablement time of each case
         enable_times = [instant for instant in batch_instance[log_ids.enabled_time] if instant < batch_instance_start]
-        non_activating_instants += random.sample(enable_times, min(len(enable_times), num_batch_enabled_negative_events))
+        non_activating_instants += random.sample(
+            enable_times, min(len(enable_times), num_batch_enabled_negative_events)
+        )
         # 3 - Obtain the features per instant
         for instant in non_activating_instants:
             if instant < batch_instance_start:
                 # Discard the batch cases enabled after the current instant, and then calculate the features of the remaining cases.
                 features += [
                     _get_features(
-                        event_log,
-                        instant,
-                        batch_instance[batch_instance[log_ids.enabled_time] <= instant],
-                        0,
-                        log_ids
+                        event_log, instant, batch_instance[batch_instance[log_ids.enabled_time] <= instant], 0, log_ids
                     )
                 ]
     # Transform duration to seconds
     features_table = pd.DataFrame(data=features)
-    features_table['instant'] = features_table['instant'].astype(np.int64) / 10 ** 9
-    features_table['batch_ready_wt'] = features_table['batch_ready_wt'].apply(lambda t: t.total_seconds())
-    features_table['batch_max_wt'] = features_table['batch_max_wt'].apply(lambda t: t.total_seconds())
+    features_table["instant"] = features_table["instant"].astype(np.int64) / 10**9
+    features_table["batch_ready_wt"] = features_table["batch_ready_wt"].apply(lambda t: t.total_seconds())
+    features_table["batch_max_wt"] = features_table["batch_max_wt"].apply(lambda t: t.total_seconds())
     # features_table['max_cycle_time'] = features_table['max_cycle_time'].apply(lambda t: t.total_seconds())
     # Return table
     return features_table
 
 
 def _get_features(
-        event_log: pd.DataFrame,
-        instant: pd.Timestamp,
-        batch_instance: pd.DataFrame,
-        outcome: int,
-        log_ids: EventLogIDs
+    event_log: pd.DataFrame, instant: pd.Timestamp, batch_instance: pd.DataFrame, outcome: int, log_ids: EventLogIDs
 ) -> dict:
     """
     Get the features to discover activation rules of a specific instant [instant] in a batch instance [batch_instance].
@@ -120,14 +106,14 @@ def _get_features(
         log_ids.batch_type: batch_type,
         log_ids.activity: activity,
         log_ids.resource: resource,
-        'instant': instant,
-        'batch_size': batch_size,
-        'batch_ready_wt': batch_ready_wt,
-        'batch_max_wt': batch_max_wt,
+        "instant": instant,
+        "batch_size": batch_size,
+        "batch_ready_wt": batch_ready_wt,
+        "batch_max_wt": batch_max_wt,
         # 'max_cycle_time': max_cycle_time,
-        'week_day': week_day,
+        "week_day": week_day,
         # 'day_of_month': day_of_month,
-        'daily_hour': daily_hour,
+        "daily_hour": daily_hour,
         # 'minute': minute_of_day,
-        'outcome': outcome
+        "outcome": outcome,
     }

@@ -1,13 +1,15 @@
 import pandas as pd
 
-from .config import EventLogIDs, BatchType
+from pix_framework.io.event_log import EventLogIDs
+
+from .config import BatchType
 
 
 def discover_batches(
-        event_log: pd.DataFrame,
-        log_ids: EventLogIDs,
-        batch_min_size: int = 2,
-        max_sequential_gap: pd.Timedelta = pd.Timedelta(0)
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    batch_min_size: int = 2,
+    max_sequential_gap: pd.Timedelta = pd.Timedelta(0),
 ) -> pd.DataFrame:
     """
     Discover activity instance groups that has been processed as a batch. A batch is a set of activity instances
@@ -33,10 +35,7 @@ def discover_batches(
 
 
 def _identify_single_activity_batches(
-        event_log: pd.DataFrame,
-        log_ids: EventLogIDs,
-        batch_min_size: int,
-        max_sequential_gap: pd.Timedelta
+    event_log: pd.DataFrame, log_ids: EventLogIDs, batch_min_size: int, max_sequential_gap: pd.Timedelta
 ):
     batches = []
     # Group all the activity instances of the same activity and resource
@@ -51,8 +50,10 @@ def _identify_single_activity_batches(
                 batch_instance_end = event[log_ids.end_time]
             else:
                 # Batch detection in process
-                if (event[log_ids.enabled_time] <= batch_instance_start and
-                        (event[log_ids.start_time] - batch_instance_end) <= max_sequential_gap):
+                if (
+                    event[log_ids.enabled_time] <= batch_instance_start
+                    and (event[log_ids.start_time] - batch_instance_end) <= max_sequential_gap
+                ):
                     # Add event to batch
                     batch_instance += [index]
                     # Update batch end if necessary
@@ -78,7 +79,7 @@ def _identify_single_activity_batches(
         ids += [batch_id] * len(batch_indexes)
     # Set IDs for batched columns
     event_log.loc[indexes, log_ids.batch_id] = ids
-    event_log[log_ids.batch_id] = event_log[log_ids.batch_id].astype('Int64')
+    event_log[log_ids.batch_id] = event_log[log_ids.batch_id].astype("Int64")
 
 
 def _classify_batch_types(event_log: pd.DataFrame, log_ids: EventLogIDs):
@@ -100,8 +101,7 @@ def _classify_batch_types(event_log: pd.DataFrame, log_ids: EventLogIDs):
 
 def _is_parallel_batch(batch_events: pd.DataFrame, log_ids: EventLogIDs) -> bool:
     # If all events share start and end time, is parallel
-    return (len(batch_events[log_ids.start_time].unique()) == 1 and
-            len(batch_events[log_ids.end_time].unique()) == 1)
+    return len(batch_events[log_ids.start_time].unique()) == 1 and len(batch_events[log_ids.end_time].unique()) == 1
 
 
 def _is_concurrent_batch(batch_events: pd.DataFrame, log_ids: EventLogIDs) -> bool:

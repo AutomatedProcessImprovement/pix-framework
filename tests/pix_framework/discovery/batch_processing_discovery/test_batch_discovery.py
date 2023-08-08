@@ -1,11 +1,11 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.batch_processing_discovery.config import DEFAULT_CSV_IDS
 from pix_framework.discovery.batch_processing_discovery.discovery import (
     _classify_batch_types,
     _identify_single_activity_batches,
 )
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 assets_dir = Path(__file__).parent / "assets"
 
