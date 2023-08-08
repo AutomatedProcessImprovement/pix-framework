@@ -4,10 +4,24 @@ from statistics import mode
 import numpy as np
 import pandas as pd
 
-from start_time_estimator.concurrency_oracle import DirectlyFollowsConcurrencyOracle, AlphaConcurrencyOracle, \
-    HeuristicsConcurrencyOracle, DeactivatedConcurrencyOracle, OverlappingConcurrencyOracle
-from start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod, ResourceAvailabilityType, OutlierStatistic, Configuration
-from start_time_estimator.resource_availability import SimpleResourceAvailability, CalendarResourceAvailability
+from .concurrency_oracle import (
+    AlphaConcurrencyOracle,
+    DeactivatedConcurrencyOracle,
+    DirectlyFollowsConcurrencyOracle,
+    HeuristicsConcurrencyOracle,
+    OverlappingConcurrencyOracle,
+)
+from .config import (
+    ConcurrencyOracleType,
+    Configuration,
+    OutlierStatistic,
+    ReEstimationMethod,
+    ResourceAvailabilityType,
+)
+from .resource_availability import (
+    CalendarResourceAvailability,
+    SimpleResourceAvailability,
+)
 
 
 class StartTimeEstimator:
@@ -64,14 +78,12 @@ class StartTimeEstimator:
         ].max(axis=1, skipna=True, numeric_only=False)
         # Reuse current start times as estimation if the option is enabled
         if self.config.reuse_current_start_times:
-            event_log.loc[
-                ~pd.isna(event_log[self.log_ids.start_time]),
-                self.log_ids.estimated_start_time
-            ] = event_log[self.log_ids.start_time]
+            event_log.loc[~pd.isna(event_log[self.log_ids.start_time]), self.log_ids.estimated_start_time] = event_log[
+                self.log_ids.start_time
+            ]
         # Re-estimate as instant those activities declared as instant
         event_log.loc[
-            event_log[self.log_ids.activity].isin(self.config.instant_activities),
-            self.log_ids.estimated_start_time
+            event_log[self.log_ids.activity].isin(self.config.instant_activities), self.log_ids.estimated_start_time
         ] = event_log[self.log_ids.end_time]
         # Re-estimate start time of those events with an estimated duration over the threshold
         if not math.isnan(self.config.outlier_threshold):
@@ -93,21 +105,24 @@ class StartTimeEstimator:
         estimated_events = event_log[~pd.isna(event_log[self.log_ids.estimated_start_time])]
         # For each event, if the duration is over the threshold, set the defined statistic
         for activity, events in estimated_events.groupby(self.log_ids.activity):
-            statistic_duration = self._apply_statistic(events[self.log_ids.end_time] - events[self.log_ids.estimated_start_time])
+            statistic_duration = self._apply_statistic(
+                events[self.log_ids.end_time] - events[self.log_ids.estimated_start_time]
+            )
             duration_limit = self.config.outlier_threshold * statistic_duration
             event_log.loc[
-                (event_log[self.log_ids.activity] == activity) &
-                (~pd.isna(event_log[self.log_ids.estimated_start_time])) &
-                ((event_log[self.log_ids.end_time] - event_log[self.log_ids.estimated_start_time]) > duration_limit),
-                self.log_ids.estimated_start_time
-            ] = event_log[self.log_ids.end_time] - duration_limit
+                (event_log[self.log_ids.activity] == activity)
+                & (~pd.isna(event_log[self.log_ids.estimated_start_time]))
+                & ((event_log[self.log_ids.end_time] - event_log[self.log_ids.estimated_start_time]) > duration_limit),
+                self.log_ids.estimated_start_time,
+            ] = (
+                event_log[self.log_ids.end_time] - duration_limit
+            )
 
     def _set_instant_non_estimated_start_times(self, event_log: pd.DataFrame):
         # Identify events with non_estimated as start time
         # and set their duration to instant
         event_log.loc[
-            pd.isna(event_log[self.log_ids.estimated_start_time]),
-            self.log_ids.estimated_start_time
+            pd.isna(event_log[self.log_ids.estimated_start_time]), self.log_ids.estimated_start_time
         ] = event_log[self.log_ids.end_time]
 
     def _re_estimate_non_estimated_start_times(self, event_log: pd.DataFrame):
@@ -118,10 +133,11 @@ class StartTimeEstimator:
             durations = (events[self.log_ids.end_time] - events[self.log_ids.estimated_start_time]).values
             statistic_duration = self._get_activity_duration(durations)
             event_log.loc[
-                (event_log[self.log_ids.activity] == activity) &
-                pd.isna(event_log[self.log_ids.estimated_start_time]),
-                self.log_ids.estimated_start_time
-            ] = event_log[self.log_ids.end_time] - statistic_duration
+                (event_log[self.log_ids.activity] == activity) & pd.isna(event_log[self.log_ids.estimated_start_time]),
+                self.log_ids.estimated_start_time,
+            ] = (
+                event_log[self.log_ids.end_time] - statistic_duration
+            )
         # Set remaining non estimated activity instances to instant (those of activities with no estimated time)
         event_log[self.log_ids.estimated_start_time].fillna(event_log[self.log_ids.end_time], inplace=True)
 

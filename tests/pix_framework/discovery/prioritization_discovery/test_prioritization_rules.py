@@ -1,6 +1,8 @@
 import pandas as pd
-
-from prioritization_discovery.rules import discover_prioritization_rules, _reverse_one_hot_encoding
+from pix_framework.discovery.prioritization_discovery.rules import (
+    _reverse_one_hot_encoding,
+    discover_prioritization_rules,
+)
 
 
 def test_discover_prioritization_rules():
@@ -59,12 +61,12 @@ def test_discover_prioritization_rules_with_extra_attribute():
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
     assert (
-            prioritization_rules
-            == prioritization_rules
-            == [
-                {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "750.0"}]]},
-                {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "300.0"}]]},
-            ]
+        prioritization_rules
+        == prioritization_rules
+        == [
+            {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "750.0"}]]},
+            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "300.0"}]]},
+        ]
     )
 
 
@@ -103,18 +105,20 @@ def test_discover_prioritization_rules_with_double_and_condition():
     # Discover their rules
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
-    assert sort_rules(prioritization_rules) == sort_rules([
-        {
-            "priority_level": 1,
-            "rules": [
-                [
-                    {"attribute": "loan_amount", "condition": ">", "value": "900.0"},
-                    {"attribute": "importance", "condition": "=", "value": "high"},
-                ]
-            ],
-        },
-        {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "650.0"}]]},
-    ])
+    assert sort_rules(prioritization_rules) == sort_rules(
+        [
+            {
+                "priority_level": 1,
+                "rules": [
+                    [
+                        {"attribute": "loan_amount", "condition": ">", "value": "900.0"},
+                        {"attribute": "importance", "condition": "=", "value": "high"},
+                    ]
+                ],
+            },
+            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "650.0"}]]},
+        ]
+    )
 
 
 def test_discover_prioritization_rules_inverted():
