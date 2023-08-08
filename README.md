@@ -17,6 +17,13 @@ pip install pix-framework
 
 You can browse compiled releases in the [Releases](https://github.com/AutomatedProcessImprovement/pix-framework/releases) section.
 
+## Description
+
+The framework is composed of the following packages:
+
+- [pix_framework](./src/pix_framework/)
+- [batch_processing_discovery](./src/batch_processing_discovery/)
+
 ## Development
 
 ### Testing
