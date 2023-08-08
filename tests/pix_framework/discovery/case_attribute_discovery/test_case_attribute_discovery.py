@@ -1,7 +1,6 @@
 import pandas as pd
-
-from case_attribute_discovery.config import DEFAULT_CSV_IDS
-from case_attribute_discovery.discovery import discover_case_attributes
+from pix_framework.discovery.case_attribute_discovery.config import DEFAULT_CSV_IDS
+from pix_framework.discovery.case_attribute_discovery.discovery import discover_case_attributes
 
 
 def test_discover_case_attributes_discrete():

@@ -2,8 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.io.event_log import read_csv_log
-from start_time_estimator.concurrency_oracle import (
+from pix_framework.discovery.start_time_estimator.concurrency_oracle import (
     AlphaConcurrencyOracle,
     DeactivatedConcurrencyOracle,
     DirectlyFollowsConcurrencyOracle,
@@ -11,7 +10,8 @@ from start_time_estimator.concurrency_oracle import (
     OverlappingConcurrencyOracle,
     _get_overlapping_matrix,
 )
-from start_time_estimator.config import ConcurrencyThresholds, Configuration
+from pix_framework.discovery.start_time_estimator.config import ConcurrencyThresholds, Configuration
+from pix_framework.io.event_log import read_csv_log
 
 assets_dir = Path(__file__).parent / "assets"
 

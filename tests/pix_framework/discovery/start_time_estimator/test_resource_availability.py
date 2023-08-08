@@ -2,9 +2,12 @@ from pathlib import Path
 
 import pandas as pd
 from pix_framework.calendar.resource_calendar import Interval, RCalendar
+from pix_framework.discovery.start_time_estimator.config import Configuration
+from pix_framework.discovery.start_time_estimator.resource_availability import (
+    CalendarResourceAvailability,
+    SimpleResourceAvailability,
+)
 from pix_framework.io.event_log import read_csv_log
-from start_time_estimator.config import Configuration
-from start_time_estimator.resource_availability import CalendarResourceAvailability, SimpleResourceAvailability
 
 assets_dir = Path(__file__).parent / "assets"
 
