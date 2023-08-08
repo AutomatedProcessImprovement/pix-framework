@@ -19,12 +19,11 @@ You can browse compiled releases in the [Releases](https://github.com/AutomatedP
 
 ## Description
 
-The framework is composed of the following packages:
+The `pix_framework.discovery` packge besides root modules contains the following subpackages with additional information located in their README files:
 
-- [pix_framework](./src/pix_framework/)
-- [batch_processing_discovery](./src/batch_processing_discovery/)
-- [prioritization_discovery](./src/prioritization_discovery/)
-- [start_time_estimator](./src/start_time_estimator/)
+- [batch_processing_discovery](./src/pix_framework/discovery/batch_processing_discovery/)
+- [prioritization_discovery](./src/pix_framework/discovery/prioritization_discovery/)
+- [start_time_estimator](./src/pix_framework/discovery/start_time_estimator/)
 
 ## Development
 
