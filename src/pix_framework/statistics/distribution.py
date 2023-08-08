@@ -3,7 +3,7 @@ import sys
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import scipy.stats as st
@@ -53,15 +53,13 @@ class QBPDurationDistribution:
 
 class DurationDistribution:
     def __init__(
-            self,
-            name: Union[
-                str, DistributionType
-            ] = "fix",  # supported 'fix', 'expon', 'norm', 'uniform', 'lognorm', and 'gamma'
-            mean: float = 0.0,
-            var: float = 0.0,
-            std: float = 0.0,
-            minimum: float = 0.0,
-            maximum: float = 0.0,
+        self,
+        name: Union[str, DistributionType] = "fix",
+        mean: Optional[float] = None,
+        var: Optional[float] = None,
+        std: Optional[float] = None,
+        minimum: Optional[float] = None,
+        maximum: Optional[float] = None
     ):
         self.type = DistributionType.from_string(name) if isinstance(name, str) else name
         self.mean = mean
@@ -96,8 +94,8 @@ class DurationDistribution:
             i += 1
         # Check if all elements got generated
         if len(sample) < size:
-            print("Warning!"
-                  "Too many iterations generating durations out of the distribution limits!"
+            print("Warning! "
+                  "Too many iterations generating durations out of the distribution limits! "
                   "Setting default values!")
             sample += [self._replace_out_of_bounds_value()] * (size - len(sample))
         # Return complete sample
