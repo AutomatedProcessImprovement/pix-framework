@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 
 import pandas as pd
 
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 @dataclass
