@@ -11,6 +11,8 @@ packages = [
     { include = "pix_framework", from = "src" },
     { include = "batch_processing_discovery", from = "src" },
     { include = "prioritization_discovery", from = "src" },
+    { include = "case_attribute_discovery", from = "src" },
+    { include = "start_time_estimator", from = "src" },
 ]
 
 [build-system]
