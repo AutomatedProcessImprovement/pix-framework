@@ -3,7 +3,7 @@ from statistics import mean
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
-from pix_framework.discovery.case_attribute_discovery.config import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 
 
