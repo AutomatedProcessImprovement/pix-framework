@@ -71,12 +71,56 @@ class DurationDistribution:
         self.max = maximum
 
     def generate_sample(self, size: int) -> list:
+        """
+        Generates a sample of [size] elements following this (self) distribution parameters. The elements are
+        positive, and within the limits [self.min, self.max].
+
+        :param size: number of elements to add to the sample.
+        :return: list with the elements of the sample.
+        """
+        # Instantiate empty sample list
+        sample = []
+        i = 0  # flag for iteration limit
+        # Generate until full of values within limits
+        while len(sample) < size and i < 100:
+            # Generate missing elements
+            local_sample = self._generate_raw_sample(size - len(sample))
+            # Filter out negative and out of limits elements
+            local_sample = [element for element in local_sample if element > 0.0]
+            if self.min is not None:
+                local_sample = [element for element in local_sample if element >= self.min]
+            if self.max is not None:
+                local_sample = [element for element in local_sample if element <= self.max]
+            # Add generated elements to sample
+            sample += local_sample
+            i += 1
+        # Check if all elements got generated
+        if len(sample) < size:
+            print("Warning!"
+                  "Too many iterations generating durations out of the distribution limits!"
+                  "Setting default values!")
+            sample += [self._replace_out_of_bounds_value()] * (size - len(sample))
+        # Return complete sample
+        return sample
+
+    def _generate_raw_sample(self, size: int) -> list:
+        """
+        Generates a sample of [size] elements following this (self) distribution parameters not ensuring that the
+        returned elements are within the interval [self.min, self.max] and positive.
+
+        :param size: number of elements to add to the sample.
+        :return: list with the elements of the sample.
+        """
         sample = []
         if self.type == DistributionType.FIXED:
             sample = [self.mean] * size
         elif self.type == DistributionType.EXPONENTIAL:
             # 'loc' displaces the samples, a loc=100 will be the same as adding 100 to each sample taken from a loc=1
-            sample = st.expon.rvs(loc=self.min, scale=self.mean - self.min, size=size)
+            scale = self.mean - self.min
+            if scale < 0.0:
+                print("Warning! Trying to generate EXPON sample with 'mean' < 'min', using 'mean' as scale value.")
+                scale = self.mean
+            sample = st.expon.rvs(loc=self.min, scale=scale, size=size)
         elif self.type == DistributionType.NORMAL:
             sample = st.norm.rvs(loc=self.mean, scale=self.std, size=size)
         elif self.type == DistributionType.UNIFORM:
@@ -98,8 +142,22 @@ class DurationDistribution:
                 scale=self.var / self.mean,
                 size=size,
             )
-        # Return generated sample
         return sample
+
+    def _replace_out_of_bounds_value(self):
+        new_value = None
+        if self.mean is not None and self.mean > 0:
+            # Set to mean
+            new_value = self.mean
+        if self.min is not None and self.max is not None:
+            # If we have boundaries, check that mean is inside
+            if new_value is None or new_value < self.min or new_value > self.max:
+                # Invalid, set to middle between min and max
+                new_value = self.min + ((self.max - self.min) / 2)
+        if new_value is None or new_value < 0.0:
+            new_value = 0.0
+        # Return fixed value
+        return new_value
 
     def generate_one_value_with_boundaries(self) -> float:
         """

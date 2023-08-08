@@ -3,6 +3,7 @@ import random
 import numpy as np
 import pytest
 import scipy.stats as st
+
 from pix_framework.statistics.distribution import DistributionType, DurationDistribution, get_best_fitting_distribution
 
 
@@ -155,3 +156,26 @@ def test_serialization(expected_prosimos_dict: dict, input_distribution: Duratio
 
     # assert: compare received dictionaries
     assert actual_result == expected_prosimos_dict
+
+
+distributions_generate_sample = [
+    DurationDistribution(DistributionType.EXPONENTIAL, mean=10.0, minimum=100.0, maximum=500.0),
+    DurationDistribution(DistributionType.UNIFORM, minimum=100.0, maximum=200.0),
+    DurationDistribution(DistributionType.NORMAL, mean=10.0, std=20.0, minimum=100.0, maximum=200.0),
+    DurationDistribution(DistributionType.LOG_NORMAL, mean=10.0, var=20.0, minimum=100.0, maximum=200.0),
+    DurationDistribution(DistributionType.GAMMA, mean=10.0, var=20.0, minimum=100.0, maximum=200.0),
+    DurationDistribution(DistributionType.NORMAL, mean=0.0, std=20.0, minimum=0.0, maximum=200.0),
+    DurationDistribution(DistributionType.NORMAL, mean=-10.0, std=1.0, minimum=0.0, maximum=200.0),
+]
+
+
+@pytest.mark.parametrize("distribution", distributions_generate_sample)
+def test_generate_sample(distribution: DurationDistribution):
+    print()
+    print(distribution)
+    sample = distribution.generate_sample(1000)
+    print(sample)
+    print()
+    assert min(sample) >= 0.0
+    assert min(sample) >= distribution.min
+    assert max(sample) <= distribution.max
