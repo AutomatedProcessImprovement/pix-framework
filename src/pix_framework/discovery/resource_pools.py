@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 class _ResourcePoolDiscoverer:

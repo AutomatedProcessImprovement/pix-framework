@@ -6,7 +6,7 @@ import pandas as pd
 from pix_framework.calendar.availability import absolute_unavailability_intervals_within
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 
 

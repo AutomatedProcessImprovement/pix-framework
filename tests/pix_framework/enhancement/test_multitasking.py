@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from pix_framework.enhancement.multitasking import adjust_durations
-from pix_framework.input import read_csv_log
-from pix_framework.log_ids import DEFAULT_XES_IDS
+from pix_framework.io.event_log import read_csv_log
+from pix_framework.io.event_log import DEFAULT_XES_IDS
 
 assets_dir = Path(__file__).parent.parent / "assets"
 

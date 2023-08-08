@@ -5,8 +5,8 @@ import pytest
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.case_arrival import discover_case_arrival_calendar, discover_inter_arrival_distribution, \
     discover_case_arrival_model, CaseArrivalModel
-from pix_framework.input import read_csv_log
-from pix_framework.log_ids import APROMORE_LOG_IDS
+from pix_framework.io.event_log import read_csv_log
+from pix_framework.io.event_log import APROMORE_LOG_IDS
 
 assets_dir = Path(__file__).parent.parent / "assets"
 

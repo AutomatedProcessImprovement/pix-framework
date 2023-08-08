@@ -10,7 +10,7 @@ from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, 
     discover_resource_calendars_per_profile
 from pix_framework.discovery.resource_profiles import ResourceProfile, discover_undifferentiated_resource_profile, \
     discover_differentiated_resource_profiles, discover_pool_resource_profiles
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 @dataclass

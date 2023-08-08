@@ -6,9 +6,9 @@ from pix_framework.discovery.gateway_probabilities import (
     compute_gateway_probabilities,
     GatewayProbabilitiesDiscoveryMethod,
 )
-from pix_framework.input import read_csv_log
+from pix_framework.io.event_log import read_csv_log
 from pix_framework.io.bpm_graph import BPMNGraph
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
