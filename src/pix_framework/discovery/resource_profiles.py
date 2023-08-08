@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 from pix_framework.discovery.resource_pools import discover_resource_pools
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 @dataclass

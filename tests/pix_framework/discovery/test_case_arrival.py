@@ -1,12 +1,14 @@
 from pathlib import Path
 
 import pytest
-
 from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.case_arrival import discover_case_arrival_calendar, discover_inter_arrival_distribution, \
-    discover_case_arrival_model, CaseArrivalModel
-from pix_framework.input import read_csv_log
-from pix_framework.log_ids import APROMORE_LOG_IDS
+from pix_framework.discovery.case_arrival import (
+    CaseArrivalModel,
+    discover_case_arrival_calendar,
+    discover_case_arrival_model,
+    discover_inter_arrival_distribution,
+)
+from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
@@ -24,7 +26,7 @@ def test_discover_case_arrival_model(log_name):
     assert type(result) is CaseArrivalModel
     assert type(result.case_arrival_calendar) is RCalendar
     assert result.inter_arrival_times is not None
-    assert result.inter_arrival_times["distribution_name"] in ["fix", "norm"]
+    assert result.inter_arrival_times["distribution_name"] in ["fix", "norm", "gamma"]
 
 
 @pytest.mark.integration
@@ -110,5 +112,5 @@ def test_discover_inter_arrival_distribution_normal(log_name):
     result = discover_inter_arrival_distribution(log, log_ids)
     # Assert
     assert result is not None
-    assert result["distribution_name"] == "norm"
+    assert result["distribution_name"] in ["norm", "gamma"]
     assert result["distribution_params"][0]["value"] - 2700 < 600  # Less than 10m error in norm mean

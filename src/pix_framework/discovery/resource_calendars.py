@@ -7,7 +7,7 @@ import pandas as pd
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.calendar_factory import CalendarFactory
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 class CalendarType(str, Enum):
