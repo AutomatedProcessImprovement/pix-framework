@@ -5,7 +5,7 @@ from typing import List, Union
 import pandas as pd
 
 from pix_framework.io.bpm_graph import BPMNGraph
-from pix_framework.log_ids import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
 
 
 @dataclass

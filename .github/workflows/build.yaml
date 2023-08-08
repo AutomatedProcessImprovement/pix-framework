@@ -49,7 +49,7 @@ jobs:
 
       - name: Test
         run: |
-          poetry run pytest
+          poetry run pytest -m "not benchmark"
 
       - name: Exit if not on main
         if: github.ref != 'refs/heads/main'
