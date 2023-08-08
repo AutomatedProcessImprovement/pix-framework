@@ -1,9 +1,8 @@
 import pandas as pd
 
-from pix_framework.log_ids import DEFAULT_CSV_IDS
-from pix_framework.log_split.log_split import (
+from pix_framework.io.event_log import DEFAULT_CSV_IDS, split_log_training_validation_trace_wise
+from pix_framework.io.event_log import (
     split_log_training_validation_event_wise,
-    split_log_training_validation_trace_wise,
 )
 
 
