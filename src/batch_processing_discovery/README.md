@@ -1,8 +1,5 @@
 # Batch Processing Discovery
 
-![ci](https://github.com/AutomatedProcessImprovement/batch-processing-discovery/actions/workflows/build.yaml/badge.svg)
-![version](https://img.shields.io/github/v/tag/AutomatedProcessImprovement/batch-processing-discovery)
-
 This technique takes as input an event log (pd.DataFrame) recording the execution of the activities of a process with enabled, start and end
 timestamps, as well as the resource who performed it, and discovers which activity instances have been executed in a batch, and the
 characteristics of this batch processing.

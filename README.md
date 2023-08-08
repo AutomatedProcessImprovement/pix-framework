@@ -23,6 +23,7 @@ The framework is composed of the following packages:
 
 - [pix_framework](./src/pix_framework/)
 - [batch_processing_discovery](./src/batch_processing_discovery/)
+- [prioritization_discovery](./src/prioritization_discovery/)
 
 ## Development
 
