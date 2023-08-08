@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.batch_processing_discovery.config import DEFAULT_CSV_IDS
 from pix_framework.discovery.prioritization_discovery.discovery import (
     _discover_prioritized_instances,
     _split_to_individual_observations,
     discover_priority_rules,
 )
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 assets_dir = Path(__file__).parent / "assets"
 

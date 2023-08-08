@@ -1,18 +1,19 @@
 import pandas as pd
 from numpy import mean
 
-from .config import EventLogIDs
+from pix_framework.io.event_log import EventLogIDs
+
 from .discovery import discover_batches
 from .features_table import _compute_features_table
 from .rules import _get_rules, _parse_rules
 
 
 def discover_batch_processing_and_characteristics(
-        event_log: pd.DataFrame,
-        log_ids: EventLogIDs,
-        batch_min_size: int = 2,
-        max_sequential_gap: pd.Timedelta = pd.Timedelta(0),
-        resource_aware: bool = False
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    batch_min_size: int = 2,
+    max_sequential_gap: pd.Timedelta = pd.Timedelta(0),
+    resource_aware: bool = False,
 ) -> list:
     """
     Discover, from [event_log], the activities being processed as a batch, and the characteristics of the batches:
@@ -39,16 +40,11 @@ def discover_batch_processing_and_characteristics(
     """
     # Discover batch behavior
     batched_event_log = discover_batches(
-        event_log=event_log,
-        log_ids=log_ids,
-        batch_min_size=batch_min_size,
-        max_sequential_gap=max_sequential_gap
+        event_log=event_log, log_ids=log_ids, batch_min_size=batch_min_size, max_sequential_gap=max_sequential_gap
     )
     # Get the characteristics of each bach
     batch_characteristics = discover_batch_characteristics(
-        event_log=batched_event_log,
-        log_ids=log_ids,
-        resource_aware=resource_aware
+        event_log=batched_event_log, log_ids=log_ids, resource_aware=resource_aware
     )
     # Return characteristics
     return batch_characteristics
@@ -71,7 +67,7 @@ def discover_batch_characteristics(event_log: pd.DataFrame, log_ids: EventLogIDs
         keys = [log_ids.activity]
     # Calculate features per batch
     batches = []
-    for (group_key, grouped_instances) in event_log.groupby(keys):
+    for group_key, grouped_instances in event_log.groupby(keys):
         batched_grouped_instances = grouped_instances[~pd.isna(grouped_instances[log_ids.batch_id])]
         # If the activity is executed as a batch any time
         if len(batched_grouped_instances) > 0:
@@ -82,28 +78,28 @@ def discover_batch_characteristics(event_log: pd.DataFrame, log_ids: EventLogIDs
             duration_distribution = _get_duration_distribution(grouped_instances, log_ids)
             # Get the features table of the instances in this group
             features_table = _compute_features_table(
-                event_log=event_log,
-                batched_instances=batched_grouped_instances,
-                log_ids=log_ids
-            ).drop([log_ids.batch_id, log_ids.batch_type, log_ids.resource, log_ids.activity, 'instant'], axis=1)
+                event_log=event_log, batched_instances=batched_grouped_instances, log_ids=log_ids
+            ).drop([log_ids.batch_id, log_ids.batch_type, log_ids.resource, log_ids.activity, "instant"], axis=1)
             # Get the activation rules
             firing_rules = {}
-            if len(features_table['outcome'].unique()) > 1:
-                discovered_rules = _get_rules(features_table, 'outcome')
+            if len(features_table["outcome"].unique()) > 1:
+                discovered_rules = _get_rules(features_table, "outcome")
                 if len(discovered_rules) > 0:
-                    firing_rules['confidence'] = discovered_rules['confidence']
-                    firing_rules['support'] = discovered_rules['support']
-                    firing_rules['rules'] = _parse_rules(discovered_rules['model'])
+                    firing_rules["confidence"] = discovered_rules["confidence"]
+                    firing_rules["support"] = discovered_rules["support"]
+                    firing_rules["rules"] = _parse_rules(discovered_rules["model"])
                 # Create batch dictionary
-                batches += [{
-                    'activity': grouped_instances[log_ids.activity].iloc[0],
-                    'resources': list(batched_grouped_instances[log_ids.resource].unique()),
-                    'type': batched_grouped_instances[log_ids.batch_type].mode().iloc[0],
-                    'batch_frequency': batch_frequency,
-                    'size_distribution': size_distribution,
-                    'duration_distribution': duration_distribution,
-                    'firing_rules': firing_rules
-                }]
+                batches += [
+                    {
+                        "activity": grouped_instances[log_ids.activity].iloc[0],
+                        "resources": list(batched_grouped_instances[log_ids.resource].unique()),
+                        "type": batched_grouped_instances[log_ids.batch_type].mode().iloc[0],
+                        "batch_frequency": batch_frequency,
+                        "size_distribution": size_distribution,
+                        "duration_distribution": duration_distribution,
+                        "firing_rules": firing_rules,
+                    }
+                ]
     return batches
 
 
@@ -144,15 +140,15 @@ def _get_duration_distribution(event_log: pd.DataFrame, log_ids: EventLogIDs) ->
     # Copy log to edit
     event_log_copy = event_log.copy()
     # Set activity duration as new column
-    event_log_copy['duration'] = event_log_copy[log_ids.end_time] - event_log_copy[log_ids.start_time]
+    event_log_copy["duration"] = event_log_copy[log_ids.end_time] - event_log_copy[log_ids.start_time]
     # Save durations of no batched activity instances
-    no_batched_durations = list(event_log_copy[pd.isna(event_log_copy[log_ids.batch_id])]['duration'])
+    no_batched_durations = list(event_log_copy[pd.isna(event_log_copy[log_ids.batch_id])]["duration"])
     # For each batch size, record its activity duration
     batched_durations = {}
     batched_executions = event_log_copy[~pd.isna(event_log_copy[log_ids.batch_id])]
     for batch_id, events in batched_executions.groupby([log_ids.batch_id]):
         batch_size = len(events)
-        batched_durations[batch_size] = batched_durations.get(batch_size, []) + list(events['duration'])
+        batched_durations[batch_size] = batched_durations.get(batch_size, []) + list(events["duration"])
     # Compute scale factor of mean value
     durations = {}
     if len(no_batched_durations) > 0:

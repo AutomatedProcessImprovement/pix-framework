@@ -39,6 +39,8 @@ DEFAULT_CSV_IDS = EventLogIDs(
     available_time="available_time",
     estimated_start_time="estimated_start_time",
     resource="Resource",
+    batch_id="batch_instance_id",
+    batch_type="batch_instance_type",
 )
 DEFAULT_XES_IDS = EventLogIDs(
     case="case:concept:name",
