@@ -6,8 +6,7 @@ from pix_framework.discovery.resource_activity_performances import ActivityResou
 from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
-from pix_framework.io.event_log import PROSIMOS_LOG_IDS
+from pix_framework.io.event_log import APROMORE_LOG_IDS, DEFAULT_XES_IDS, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
@@ -180,3 +179,23 @@ def test_discover_case_arrival_model_pool(log_name):
         )
         == 8
     )
+
+
+def test_resource_profiles_complete():
+    log_path = assets_dir / "BPIC15_1_processed.csv.gz"
+    log = read_csv_log(log_path, DEFAULT_XES_IDS)
+
+    model = discover_resource_model(
+        log, DEFAULT_XES_IDS, CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE)
+    )
+
+    # Ensure "9264148" in activity_resource_distributions
+    resource_id = "9264148"
+    assert any(
+        [
+            resource_id in [d.resource_id for d in ard.activity_resources_distributions]
+            for ard in model.activity_resource_distributions
+        ]
+    )
+    # Ensure "9264148" in resource_profiles
+    assert any([resource_id in [r.id for r in rp.resources] for rp in model.resource_profiles])
