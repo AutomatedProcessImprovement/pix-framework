@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 from pix_framework.discovery.prioritization_discovery.rules import (
     _reverse_one_hot_encoding,
@@ -29,7 +31,7 @@ def test_discover_prioritization_rules():
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
     assert prioritization_rules == [
-        {"priority_level": 1, "rules": [[{"attribute": "Activity", "condition": "=", "value": "C"}]]}
+        {"priority_level": 1, "rules": [[{"attribute": "Activity", "comparison": "=", "value": "C"}]]}
     ]
 
 
@@ -61,12 +63,14 @@ def test_discover_prioritization_rules_with_extra_attribute():
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
     assert (
-        prioritization_rules
-        == prioritization_rules
-        == [
-            {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "750.0"}]]},
-            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "300.0"}]]},
-        ]
+        sort_rules(prioritization_rules)
+        == sort_rules(prioritization_rules)
+        == sort_rules(
+            [
+                {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "750.0"}]]},
+                {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "300.0"}]]},
+            ]
+        )
     )
 
 
@@ -111,12 +115,12 @@ def test_discover_prioritization_rules_with_double_and_condition():
                 "priority_level": 1,
                 "rules": [
                     [
-                        {"attribute": "loan_amount", "condition": ">", "value": "900.0"},
-                        {"attribute": "importance", "condition": "=", "value": "high"},
+                        {"attribute": "loan_amount", "comparison": ">", "value": "900.0"},
+                        {"attribute": "importance", "comparison": "=", "value": "high"},
                     ]
                 ],
             },
-            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "condition": ">", "value": "650.0"}]]},
+            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "650.0"}]]},
         ]
     )
 
@@ -156,11 +160,13 @@ def test_discover_prioritization_rules_inverted():
     # Discover their rules
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
-    assert prioritization_rules == [
-        {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "condition": "<=", "value": "650.0"}]]},
-        {"priority_level": 2, "rules": [[{"attribute": "importance", "condition": "=", "value": "high"}]]},
-        {"priority_level": 3, "rules": [[{"attribute": "loan_amount", "condition": "<=", "value": "1300.0"}]]},
-    ]
+    assert sort_rules(prioritization_rules) == sort_rules(
+        [
+            {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "comparison": "<=", "value": "650.0"}]]},
+            {"priority_level": 2, "rules": [[{"attribute": "importance", "comparison": "=", "value": "high"}]]},
+            {"priority_level": 3, "rules": [[{"attribute": "loan_amount", "comparison": "<=", "value": "1300.0"}]]},
+        ]
+    )
 
 
 def test__reverse_one_hot_encoding():
@@ -168,8 +174,8 @@ def test__reverse_one_hot_encoding():
     assert _reverse_one_hot_encoding(
         model=[
             [
-                {"attribute": "urgency_high", "condition": ">", "value": "0.5"},
-                {"attribute": "urgency_low", "condition": "<=", "value": "0.5"},
+                {"attribute": "urgency_high", "comparison": ">", "value": "0.5"},
+                {"attribute": "urgency_low", "comparison": "<=", "value": "0.5"},
             ]
         ],
         dummy_columns={"urgency": ["low", "medium", "high"]},
@@ -181,15 +187,15 @@ def test__reverse_one_hot_encoding():
                 "amount": [100, 50, 10, 2, 40, 54, 23, 28, 54],
             }
         ),
-    ) == [[{"attribute": "urgency", "condition": "=", "value": "high"}]]
+    ) == [[{"attribute": "urgency", "comparison": "=", "value": "high"}]]
     # Check redundancy removal when there is 5 possible values for an attribute and 4 rules with '!='
     assert _reverse_one_hot_encoding(
         model=[
             [
-                {"attribute": "urgency_low_medium", "condition": "<=", "value": "0.5"},
-                {"attribute": "urgency_medium", "condition": "<=", "value": "0.5"},
-                {"attribute": "urgency_medium_high", "condition": "<=", "value": "0.5"},
-                {"attribute": "urgency_high", "condition": "<=", "value": "0.5"},
+                {"attribute": "urgency_low_medium", "comparison": "<=", "value": "0.5"},
+                {"attribute": "urgency_medium", "comparison": "<=", "value": "0.5"},
+                {"attribute": "urgency_medium_high", "comparison": "<=", "value": "0.5"},
+                {"attribute": "urgency_high", "comparison": "<=", "value": "0.5"},
             ]
         ],
         dummy_columns={"urgency": ["low", "low_medium", "medium", "medium_high", "high"]},
@@ -203,14 +209,15 @@ def test__reverse_one_hot_encoding():
                 "amount": [100, 50, 10, 2, 40, 54, 23, 28, 54],
             }
         ),
-    ) == [[{"attribute": "urgency", "condition": "=", "value": "low"}]]
-    # Check redundancy removal when there is 4 possible values (in the filtered data) for an attribute and 3 rules with '!='
+    ) == [[{"attribute": "urgency", "comparison": "=", "value": "low"}]]
+    # Check redundancy removal when there is 4 possible values
+    # (in the filtered data) for an attribute and 3 rules with '!='
     assert _reverse_one_hot_encoding(
         model=[
             [
-                {"attribute": "urgency_medium", "condition": "<=", "value": "0.5"},
-                {"attribute": "urgency_medium_high", "condition": "<=", "value": "0.5"},
-                {"attribute": "urgency_high", "condition": "<=", "value": "0.5"},
+                {"attribute": "urgency_medium", "comparison": "<=", "value": "0.5"},
+                {"attribute": "urgency_medium_high", "comparison": "<=", "value": "0.5"},
+                {"attribute": "urgency_high", "comparison": "<=", "value": "0.5"},
             ]
         ],
         dummy_columns={"urgency": ["low", "low_medium", "medium", "medium_high", "high"]},
@@ -224,7 +231,7 @@ def test__reverse_one_hot_encoding():
                 "amount": [100, 50, 10, 2, 40, 54, 23, 28, 54],
             }
         ),
-    ) == [[{"attribute": "urgency", "condition": "=", "value": "low"}]]
+    ) == [[{"attribute": "urgency", "comparison": "=", "value": "low"}]]
 
 
 def sort_rules(rules):
