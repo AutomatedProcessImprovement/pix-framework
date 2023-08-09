@@ -173,6 +173,6 @@ def test_discover_priority_rules_naive():
     prioritization_levels = discover_priority_rules(event_log, attributes)
     # Assert expected levels and rules
     assert prioritization_levels == [
-        {"priority_level": 1, "rules": [[{"attribute": "urgency", "condition": "=", "value": "high"}]]},
-        {"priority_level": 2, "rules": [[{"attribute": "urgency", "condition": "=", "value": "medium"}]]},
+        {"priority_level": 1, "rules": [[{"attribute": "urgency", "comparison": "=", "value": "high"}]]},
+        {"priority_level": 2, "rules": [[{"attribute": "urgency", "comparison": "=", "value": "medium"}]]},
     ]
