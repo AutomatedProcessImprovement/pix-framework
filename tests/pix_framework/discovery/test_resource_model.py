@@ -6,8 +6,7 @@ from pix_framework.discovery.resource_activity_performances import ActivityResou
 from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
-from pix_framework.io.event_log import PROSIMOS_LOG_IDS
+from pix_framework.io.event_log import APROMORE_LOG_IDS, DEFAULT_XES_IDS, PROSIMOS_LOG_IDS, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 

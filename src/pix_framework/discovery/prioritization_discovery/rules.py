@@ -107,8 +107,8 @@ def _tree_to_best_rules(tree, feature_names) -> list:
             # Add ID and rule for left and right children
             missing_nodes += [tree_.children_left[current_node], tree_.children_right[current_node]]
             current_rules += [
-                current_rule + [{"attribute": name, "condition": "<=", "value": threshold}],
-                current_rule + [{"attribute": name, "condition": ">", "value": threshold}],
+                current_rule + [{'attribute': name, 'comparison': '<=', 'value': threshold}],
+                current_rule + [{'attribute': name, 'comparison': '>', 'value': threshold}]
             ]
         else:
             # Leaf node
@@ -131,42 +131,26 @@ def _summarize_rules(rules: list) -> list:
     # Merge rules by same feature
     attributes = {rule["attribute"] for rule in rules}
     for attribute in attributes:
-        operators = {rule["condition"] for rule in rules if rule["attribute"] == attribute}
+        operators = {rule['comparison'] for rule in rules if rule['attribute'] == attribute}
         if len(operators) > 1:
             # Add interval rule
-            filtered_rules += [
-                {
-                    "attribute": attribute,
-                    "condition": "in",
-                    "value": "({},{}]".format(
-                        max(
-                            [
-                                rule["value"]
-                                for rule in rules
-                                if rule["attribute"] == attribute and rule["condition"] == ">"
-                            ]
-                        ),
-                        min(
-                            [
-                                rule["value"]
-                                for rule in rules
-                                if rule["attribute"] == attribute and rule["condition"] == "<="
-                            ]
-                        ),
-                    ),
-                }
-            ]
+            filtered_rules += [{
+                'attribute': attribute,
+                'comparison': 'in',
+                'value': "({},{}]".format(
+                    max([rule['value'] for rule in rules if rule['attribute'] == attribute and rule['comparison'] == ">"]),
+                    min([rule['value'] for rule in rules if rule['attribute'] == attribute and rule['comparison'] == "<="])
+                )
+            }]
         else:
             # Add single rule
             operator = operators.pop()
-            values = [rule["value"] for rule in rules if rule["attribute"] == attribute]
-            filtered_rules += [
-                {
-                    "attribute": attribute,
-                    "condition": operator,
-                    "value": str(min(values)) if operator == "<=" else str(max(values)),
-                }
-            ]
+            values = [rule['value'] for rule in rules if rule['attribute'] == attribute]
+            filtered_rules += [{
+                'attribute': attribute,
+                'comparison': operator,
+                'value': str(min(values)) if operator == "<=" else str(max(values))
+            }]
     # Return rules
     return filtered_rules
 
@@ -189,10 +173,10 @@ def _fulfill_ruleset(rules: list, observation: pd.Series):
     for rule in rules:
         values = [float(value) for value in re.findall(r"[\d.]+", rule["value"])]
         if (
-            (rule["condition"] == "<=" and observation[rule["attribute"]] > values[0])
-            or (rule["condition"] == ">" and observation[rule["attribute"]] <= values[0])
-            or (rule["condition"] == "in" and observation[rule["attribute"]] <= values[0])
-            or (rule["condition"] == "in" and observation[rule["attribute"]] > values[1])
+                (rule['comparison'] == "<=" and observation[rule['attribute']] > values[0]) or
+                (rule['comparison'] == ">" and observation[rule['attribute']] <= values[0]) or
+                (rule['comparison'] == "in" and observation[rule['attribute']] <= values[0]) or
+                (rule['comparison'] == "in" and observation[rule['attribute']] > values[1])
         ):
             fulfills = False
     return fulfills
@@ -226,20 +210,22 @@ def _reverse_one_hot_encoding_ruleset(ruleset: list, dummy_columns: dict):
     rules_to_remove = []  # Indices of the rules to remove because of redundancy
     # Parse each rule in the ruleset
     for rule in ruleset:
-        if rule["attribute"] in dummy_map:
-            (orig_name, orig_value) = dummy_map[rule["attribute"]]
-            rule["attribute"] = orig_name
-            rule["value"] = orig_value
-            if rule["condition"] == ">":
-                rule["condition"] = "="
+        if rule['attribute'] in dummy_map:
+            (orig_name, orig_value) = dummy_map[rule['attribute']]
+            rule['attribute'] = orig_name
+            rule['value'] = orig_value
+            if rule['comparison'] == ">":
+                rule['comparison'] = "="
                 equal_to_attributes += [orig_name]
             else:
-                rule["condition"] = "!="
+                rule['comparison'] = "!="
                 diff_than_attributes[orig_name] += [orig_value]
     # Remove rules with '!=' if there's also a rule with '='
     for attribute in set(equal_to_attributes):
-        rules_to_remove += [  # Get the index of the rules of this attribute with "!=" condition
-            index for index, rule in enumerate(ruleset) if rule["attribute"] == attribute and rule["condition"] == "!="
+        rules_to_remove += [  # Get the index of the rules of this attribute with "!=" comparison
+            index
+            for index, rule in enumerate(ruleset)
+            if rule['attribute'] == attribute and rule['comparison'] == "!="
         ]
     # Check if any categorical rule with N possible values got N-1 times '!=' (meaning it's '=' to the missing value).
     for attribute in diff_than_attributes:
@@ -250,16 +236,16 @@ def _reverse_one_hot_encoding_ruleset(ruleset: list, dummy_columns: dict):
         ):
             # Attribute has N possible values, and N-1 rules saying 'different from', simplify it
             new_rule = {
-                "attribute": attribute,
-                "condition": "=",
-                "value": [  # Get the missing value in all "!=" rules for this attribute
-                    value for value in dummy_columns[attribute] if value not in diff_than_attributes[attribute]
-                ][
-                    0
-                ],  # Get the first element (there should be only one)
+                'attribute': attribute,
+                'comparison': "=",
+                'value': [  # Get the missing value in all "!=" rules for this attribute
+                    value
+                    for value in dummy_columns[attribute]
+                    if value not in diff_than_attributes[attribute]
+                ][0]  # Get the first element (there should be only one)
             }
-            # Get the index of the rules of this attribute with "!=" condition
-            rules_to_remove += [index for index, rule in enumerate(ruleset) if rule["attribute"] == attribute]
+            # Get the index of the rules of this attribute with "!=" comparison
+            rules_to_remove += [index for index, rule in enumerate(ruleset) if rule['attribute'] == attribute]
             # Add new rule to ruleset
             ruleset += [new_rule]
     # Remove redundant rules
