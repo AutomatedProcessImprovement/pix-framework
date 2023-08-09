@@ -22,13 +22,6 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.9' ]
-    environment:
-      name: PyPI
-      url: https://pypi.org/p/pix-framework
-    permissions:
-      id-token: write
-      contents: write
-      packages: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -51,10 +44,39 @@ jobs:
         run: |
           poetry run pytest -m "not benchmark"
 
-      - name: Exif if pull request
-        if: github.event_name == 'pull_request'
-        run: exit 0
-
+  release:
+    name: Release, Python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        python-version: [ '3.9' ]
+    environment:
+      name: PyPI
+      url: https://pypi.org/p/pix-framework
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      
+      - name: Install poetry
+        shell: bash
+        run: pip install poetry
+      
+      - name: Install project
+        run: |
+          poetry install
+      
       - name: Build
         run: |
           poetry build
