@@ -1,12 +1,21 @@
 from collections import Counter
-from typing import Optional
+from enum import Enum
 
 import pandas as pd
+import polars as pl
 
 from pix_framework.io.event_log import EventLogIDs
-
+from .concurrency_oracle_original import add_enabled_times as add_enabled_times_original, get_enabling_activity_instance
+from .concurrency_oracle_parallel import add_enabled_times as add_enabled_times_parallel
+from .concurrency_oracle_parallel_polars import add_enabled_times as add_enabled_times_parallel_polars
 from .config import Configuration
 from .utils import zip_with_next
+
+
+class Mode(str, Enum):
+    ORIGINAL = "original"
+    PARALLEL = "parallel"
+    PARALLEL_POLARS = "parallel_polars"
 
 
 class ConcurrencyOracle:
@@ -20,35 +29,22 @@ class ConcurrencyOracle:
 
     def enabled_since(self, trace, event) -> pd.Timestamp:
         # Get enabling activity instance or NA if none
-        enabling_activity_instance = self.enabling_activity_instance(trace, event)
-        # Return enabling activity instance
-        return (
-            enabling_activity_instance[self.log_ids.end_time]
-            if isinstance(enabling_activity_instance, pd.Series)
-            else pd.NaT
+        enabling_activity_instance = get_enabling_activity_instance(
+            trace=trace,
+            event=event,
+            log_ids=self.log_ids,
+            consider_start_times=self.config.consider_start_times,
+            concurrency=self.concurrency,
         )
-
-    def enabling_activity_instance(self, trace, event) -> Optional[pd.Series]:
-        # Get the list of previous end times
-        previous_end_times = trace[
-            (trace[self.log_ids.end_time] < event[self.log_ids.end_time])
-            & (  # i) previous to the current one;
-                (not self.config.consider_start_times)
-                or (  # ii) if parallel check is activated,
-                    trace[self.log_ids.end_time] <= event[self.log_ids.start_time]
-                )
-            )
-            & (  # not overlapping;
-                ~trace[self.log_ids.activity].isin(self.concurrency[event[self.log_ids.activity]])
-            )  # iii) with no concurrency;
-        ][self.log_ids.end_time]
-        # Get enabling activity instance or NA if none
-        enabling_activity_instance = trace.loc[previous_end_times.idxmax()] if len(previous_end_times) > 0 else None
         # Return enabling activity instance
-        return enabling_activity_instance
+        return enabling_activity_instance[self.log_ids.end_time] if not enabling_activity_instance.empty else pd.NaT
 
     def add_enabled_times(
-        self, event_log: pd.DataFrame, set_nat_to_first_event: bool = False, include_enabling_activity: bool = False
+        self,
+        event_log: pd.DataFrame,
+        set_nat_to_first_event: bool = False,
+        include_enabling_activity: bool = False,
+        mode: Mode = Mode.PARALLEL,
     ):
         """
         Add the enabled time of each activity instance to the received event log based on the concurrency relations established in the
@@ -59,36 +55,22 @@ class ConcurrencyOracle:
         :param set_nat_to_first_event:      if False, use the start of the trace as enabled time for the activity instances with no previous
                                             activity enabling them, otherwise use pd.NaT.
         :param include_enabling_activity:   if True, add a column with the label of the activity enabling the current one.
+        :param mode:                        mode to use for the computation of the enabled times. See Mode enum for more information.
         """
-        # For each trace in the log, estimate the enabled time of its events
-        indexes, enabled_times, enabling_activities = [], [], []
-        for case_id, trace in event_log.groupby(self.log_ids.case):
-            # Compute trace start time
-            if self.log_ids.start_time in trace:
-                trace_start_time = min(trace[self.log_ids.start_time].min(), trace[self.log_ids.end_time].min())
-            else:
-                trace_start_time = trace[self.log_ids.end_time].min()
-            # Get the enabling activity of each event
-            for index, event in trace.iterrows():
-                indexes += [index]
-                enabling_activity_instance = self.enabling_activity_instance(trace, event)
-                # Store enabled time
-                if isinstance(enabling_activity_instance, pd.Series):
-                    # Use computed value
-                    enabling_activity_label = enabling_activity_instance[self.log_ids.activity]
-                    enabled_times += [enabling_activity_instance[self.log_ids.end_time]]
-                else:
-                    # No enabling activity, use trace start or NA
-                    enabling_activity_label = pd.NA
-                    enabled_times += [pd.NaT] if set_nat_to_first_event else [trace_start_time]
-                # Store enabled activity label if necessary
-                if include_enabling_activity:
-                    enabling_activities += [enabling_activity_label]
-        # Set all trace enabled times (and enabling activities if necessary) at once
-        if include_enabling_activity:
-            event_log.loc[indexes, self.log_ids.enabling_activity] = enabling_activities
-        event_log.loc[indexes, self.log_ids.enabled_time] = enabled_times
-        event_log[self.log_ids.enabled_time] = pd.to_datetime(event_log[self.log_ids.enabled_time], utc=True)
+        if mode == Mode.PARALLEL_POLARS:
+            fn = add_enabled_times_parallel_polars
+        elif mode == Mode.PARALLEL:
+            fn = add_enabled_times_parallel
+        else:
+            fn = add_enabled_times_original
+        fn(
+            event_log=event_log,
+            log_ids=self.log_ids,
+            concurrency=self.concurrency,
+            set_nat_to_first_event=set_nat_to_first_event,
+            include_enabling_activity=include_enabling_activity,
+            consider_start_times=self.config.consider_start_times,
+        )
 
 
 class DeactivatedConcurrencyOracle(ConcurrencyOracle):
@@ -99,8 +81,8 @@ class DeactivatedConcurrencyOracle(ConcurrencyOracle):
     def enabled_since(self, trace, event) -> pd.Timestamp:
         return pd.NaT
 
-    def enabling_activity_instance(self, trace, event) -> Optional[pd.Series]:
-        return None
+    def enabling_activity_instance(self, trace, event) -> pd.Series:
+        return pd.Series()
 
 
 class DirectlyFollowsConcurrencyOracle(ConcurrencyOracle):
@@ -229,11 +211,12 @@ def _get_heuristics_matrices(event_log: pd.DataFrame, activities: list, config: 
 
 
 class OverlappingConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, event_log: pd.DataFrame, config: Configuration):
+    def __init__(self, event_log: pd.DataFrame, config: Configuration, optimized: bool = False):
         # Get the activity labels
         activities = set(event_log[config.log_ids.activity])
         # Get matrix with the frequency of each activity happening overlapping with the rest and in directly-follows order
-        overlapping_relations = _get_overlapping_matrix(event_log, activities, config)
+        overlapping_matrix_fn = _get_overlapping_matrix if not optimized else _get_overlapping_matrix_rs
+        overlapping_relations = overlapping_matrix_fn(event_log, activities, config)
         # Create concurrency if the overlapping relations is higher than the threshold specifies
         concurrency = {activity: set() for activity in activities}
         already_checked = set()
@@ -269,7 +252,7 @@ def _get_overlapping_matrix(event_log: pd.DataFrame, activities: set, config: Co
     # Initialize dictionary for overlapping relations df_count[A][B] = number of times B overlaps with A
     overlapping_relations = {activity: {} for activity in activities}
     # Count overlapping relations
-    for key, trace in event_log.groupby(config.log_ids.case):
+    for _, trace in event_log.groupby(config.log_ids.case):
         # Iterate the events of the trace
         for i, event in trace.iterrows():
             current_activity = event[config.log_ids.activity]
@@ -290,9 +273,42 @@ def _get_overlapping_matrix(event_log: pd.DataFrame, activities: set, config: Co
                 | (  # is being executed; OR
                     (trace[config.log_ids.start_time] <= event[config.log_ids.start_time])
                     & (event[config.log_ids.end_time] <= trace[config.log_ids.end_time])  # the other event starts and
-                    & (event[config.log_ids.activity] != trace[config.log_ids.activity])  # ends within the current one,
+                    & (event[config.log_ids.activity] != trace[config.log_ids.activity])
+                    # ends within the current one,
                 )  # and it's not the current one.
             ][config.log_ids.activity]
+            for overlapping_activity in overlapping_labels:
+                overlapping_relations[current_activity][overlapping_activity] = (
+                    overlapping_relations[current_activity].get(overlapping_activity, 0) + 1
+                )
+    # Return matrix with dependency values
+    return overlapping_relations
+
+
+def _get_overlapping_matrix_rs(event_log: pd.DataFrame, activities: set, config: Configuration) -> dict:
+    """
+    Optimized version of _get_overlapping_matrix using Polars.
+    """
+
+    event_log_rs = pl.from_pandas(event_log)
+    overlapping_relations = {activity: {} for activity in activities}
+
+    for _, trace in event_log_rs.groupby(config.log_ids.case):
+        for event in trace.iter_rows(named=True):
+            event_start_time = event[config.log_ids.start_time]
+            event_end_time = event[config.log_ids.end_time]
+            event_activity = event[config.log_ids.activity]
+            current_activity = event_activity
+            # Get labels of overlapping activity instances
+            overlapping_labels = trace.filter(
+                (pl.col(config.log_ids.start_time) < event_start_time)
+                & (event_start_time < pl.col(config.log_ids.end_time))
+                | (pl.col(config.log_ids.start_time) < event_end_time)
+                & (event_end_time < pl.col(config.log_ids.end_time))
+                | (pl.col(config.log_ids.start_time) <= event_start_time)
+                & (event_end_time <= pl.col(config.log_ids.end_time))
+                & (pl.col(config.log_ids.activity) != event_activity)
+            )[config.log_ids.activity].to_list()
             for overlapping_activity in overlapping_labels:
                 overlapping_relations[current_activity][overlapping_activity] = (
                     overlapping_relations[current_activity].get(overlapping_activity, 0) + 1
