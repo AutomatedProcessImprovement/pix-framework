@@ -39,6 +39,15 @@ class ConcurrencyOracle:
         # Return enabling activity instance
         return enabling_activity_instance[self.log_ids.end_time] if not enabling_activity_instance.empty else pd.NaT
 
+    def enabling_activity_instance(self, trace, event) -> pd.Series:
+        return get_enabling_activity_instance(
+            trace=trace,
+            event=event,
+            log_ids=self.log_ids,
+            consider_start_times=self.config.consider_start_times,
+            concurrency=self.concurrency,
+        )
+
     def add_enabled_times(
         self,
         event_log: pd.DataFrame,
