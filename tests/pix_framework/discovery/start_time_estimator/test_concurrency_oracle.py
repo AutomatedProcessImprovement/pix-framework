@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+
 from pix_framework.discovery.start_time_estimator.concurrency_oracle import (
     AlphaConcurrencyOracle,
     DeactivatedConcurrencyOracle,
@@ -25,13 +26,13 @@ def test_deactivated_concurrency_oracle():
     assert concurrency_oracle.concurrency == {}
     # The concurrency option is deactivated, so always return pd.NaT
     assert pd.isna(concurrency_oracle.enabled_since(None, datetime.now()))
-    assert not concurrency_oracle.enabling_activity_instance(None, datetime.now())
+    assert concurrency_oracle.enabling_activity_instance(None, datetime.now()).empty
     # There is no concurrency, so always enabled since the last event finished
     assert pd.isna(concurrency_oracle.enabled_since(None, pd.Timestamp("2012-11-07T10:00:00.000+02:00")))
-    assert not concurrency_oracle.enabling_activity_instance(None, pd.Timestamp("2012-11-07T10:00:00.000+02:00"))
+    assert concurrency_oracle.enabling_activity_instance(None, pd.Timestamp("2012-11-07T10:00:00.000+02:00")).empty
     # pd.NaT as the enablement time of the first event in the trace
     assert pd.isna(concurrency_oracle.enabled_since(None, pd.Timestamp("2006-07-20T22:03:11.000+02:00")))
-    assert not concurrency_oracle.enabling_activity_instance(None, pd.Timestamp("2006-07-20T22:03:11.000+02:00"))
+    assert concurrency_oracle.enabling_activity_instance(None, pd.Timestamp("2006-07-20T22:03:11.000+02:00")).empty
 
 
 def test_no_concurrency_oracle():
@@ -69,7 +70,7 @@ def test_no_concurrency_oracle():
     # pd.NaT as the enablement time of the first event in the trace
     fourth_trace = event_log[event_log[config.log_ids.case] == "trace-04"]
     assert pd.isna(concurrency_oracle.enabled_since(fourth_trace, fourth_trace.iloc[0]))
-    assert not concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0])
+    assert concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0]).empty
 
 
 def test_alpha_concurrency_oracle():
@@ -124,7 +125,7 @@ def test_alpha_concurrency_oracle():
     )
     # pd.NaT as the enablement time of the first event in the trace
     assert pd.isna(concurrency_oracle.enabled_since(fourth_trace, fourth_trace.iloc[0]))
-    assert not concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0])
+    assert concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0]).empty
 
 
 def test_heuristics_concurrency_oracle_simple():
@@ -179,7 +180,7 @@ def test_heuristics_concurrency_oracle_simple():
     )
     # pd.NaT as the enablement time of the first event in the trace
     assert pd.isna(concurrency_oracle.enabled_since(fourth_trace, fourth_trace.iloc[0]))
-    assert not concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0])
+    assert concurrency_oracle.enabling_activity_instance(fourth_trace, fourth_trace.iloc[0]).empty
 
 
 def test_add_enable_times():
