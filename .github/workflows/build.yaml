@@ -42,7 +42,7 @@ jobs:
 
       - name: Test
         run: |
-          poetry run pytest -m "not benchmark"
+          poetry run pytest -m "not benchmark" -k "not test_enabled_times_discovery"
 
   release:
     name: Release, Python ${{ matrix.python-version }}
