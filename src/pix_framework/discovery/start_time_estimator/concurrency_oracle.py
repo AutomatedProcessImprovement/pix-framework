@@ -5,47 +5,63 @@ import pandas as pd
 import polars as pl
 
 from pix_framework.io.event_log import EventLogIDs
-from .concurrency_oracle_original import add_enabled_times as add_enabled_times_original, get_enabling_activity_instance
-from .concurrency_oracle_parallel import add_enabled_times as add_enabled_times_parallel
-from .concurrency_oracle_parallel_polars import add_enabled_times as add_enabled_times_parallel_polars
+from .concurrency_oracle_optimized import (
+    add_enabled_times,
+    get_enabling_activity_instance as get_enabling_activity_instance_parallel_polars,
+)
+from .concurrency_oracle_original import (
+    add_enabled_times as add_enabled_times_original,
+    get_enabling_activity_instance as get_enabling_activity_instance_original,
+)
 from .config import Configuration
 from .utils import zip_with_next
 
 
 class Mode(str, Enum):
+    """
+    Mode of running the concurrency oracle.
+    Depending on the mode, the concurrency oracle will use different implementations.
+    """
+
+    # Original sequential implementation
     ORIGINAL = "original"
+    # Faster on tests
     PARALLEL = "parallel"
+    # Could be faster on logs with bigger traces
     PARALLEL_POLARS = "parallel_polars"
 
 
 class ConcurrencyOracle:
-    def __init__(self, concurrency: dict, config: Configuration):
+    def __init__(
+        self,
+        concurrency: dict,
+        config: Configuration,
+        mode: Mode = Mode.PARALLEL,
+    ):
         # Dict with the concurrency: self.concurrency[A] = set of activities concurrent with A
         self.concurrency = concurrency
-        # Configuration parameters
+
         self.config = config
-        # Set log IDs to ease access within class
         self.log_ids = config.log_ids
+        self.mode = mode
+        self._enabling_activity_instance = (
+            get_enabling_activity_instance_parallel_polars
+            if self.mode == Mode.PARALLEL_POLARS
+            else get_enabling_activity_instance_original
+        )
 
     def enabled_since(self, trace, event) -> pd.Timestamp:
         # Get enabling activity instance or NA if none
-        enabling_activity_instance = get_enabling_activity_instance(
-            trace=trace,
-            event=event,
-            log_ids=self.log_ids,
-            consider_start_times=self.config.consider_start_times,
-            concurrency=self.concurrency,
-        )
-        # Return enabling activity instance
+        enabling_activity_instance = self.enabling_activity_instance(trace, event)
         return enabling_activity_instance[self.log_ids.end_time] if not enabling_activity_instance.empty else pd.NaT
 
-    def enabling_activity_instance(self, trace, event) -> pd.Series:
-        return get_enabling_activity_instance(
-            trace=trace,
-            event=event,
+    def enabling_activity_instance(self, trace, event):
+        return self._enabling_activity_instance(
             log_ids=self.log_ids,
             consider_start_times=self.config.consider_start_times,
             concurrency=self.concurrency,
+            trace=trace,
+            event=event,
         )
 
     def add_enabled_times(
@@ -53,7 +69,6 @@ class ConcurrencyOracle:
         event_log: pd.DataFrame,
         set_nat_to_first_event: bool = False,
         include_enabling_activity: bool = False,
-        mode: Mode = Mode.PARALLEL,
     ):
         """
         Add the enabled time of each activity instance to the received event log based on the concurrency relations established in the
@@ -64,28 +79,39 @@ class ConcurrencyOracle:
         :param set_nat_to_first_event:      if False, use the start of the trace as enabled time for the activity instances with no previous
                                             activity enabling them, otherwise use pd.NaT.
         :param include_enabling_activity:   if True, add a column with the label of the activity enabling the current one.
-        :param mode:                        mode to use for the computation of the enabled times. See Mode enum for more information.
         """
-        if mode == Mode.PARALLEL_POLARS:
-            fn = add_enabled_times_parallel_polars
-        elif mode == Mode.PARALLEL:
-            fn = add_enabled_times_parallel
+        if self.mode == Mode.PARALLEL_POLARS:
+            return add_enabled_times(
+                event_log=event_log,
+                log_ids=self.log_ids,
+                set_nat_to_first_event=set_nat_to_first_event,
+                include_enabling_activity=include_enabling_activity,
+                get_enabling_activity_instance_fn=self.enabling_activity_instance,
+                use_polars=True,
+            )
+        elif self.mode == Mode.PARALLEL:
+            return add_enabled_times(
+                event_log=event_log,
+                log_ids=self.log_ids,
+                set_nat_to_first_event=set_nat_to_first_event,
+                include_enabling_activity=include_enabling_activity,
+                get_enabling_activity_instance_fn=self.enabling_activity_instance,
+                use_polars=False,
+            )
         else:
-            fn = add_enabled_times_original
-        fn(
-            event_log=event_log,
-            log_ids=self.log_ids,
-            concurrency=self.concurrency,
-            set_nat_to_first_event=set_nat_to_first_event,
-            include_enabling_activity=include_enabling_activity,
-            consider_start_times=self.config.consider_start_times,
-        )
+            return add_enabled_times_original(
+                event_log=event_log,
+                log_ids=self.log_ids,
+                set_nat_to_first_event=set_nat_to_first_event,
+                include_enabling_activity=include_enabling_activity,
+                get_enabling_activity_instance_fn=self.enabling_activity_instance,
+            )
 
 
 class DeactivatedConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, config: Configuration):
+    def __init__(self, config: Configuration, mode: Mode = Mode.PARALLEL):
         # Super (with empty concurrency)
-        super(DeactivatedConcurrencyOracle, self).__init__({}, config)
+        super(DeactivatedConcurrencyOracle, self).__init__(concurrency={}, config=config, mode=mode)
 
     def enabled_since(self, trace, event) -> pd.Timestamp:
         return pd.NaT
@@ -95,16 +121,16 @@ class DeactivatedConcurrencyOracle(ConcurrencyOracle):
 
 
 class DirectlyFollowsConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, event_log: pd.DataFrame, config):
+    def __init__(self, event_log: pd.DataFrame, config, mode: Mode = Mode.PARALLEL):
         # Default with no concurrency (all directly-follows relations)
         activities = event_log[config.log_ids.activity].unique()
         concurrency = {activity: set() for activity in activities}
         # Super
-        super(DirectlyFollowsConcurrencyOracle, self).__init__(concurrency, config)
+        super(DirectlyFollowsConcurrencyOracle, self).__init__(concurrency=concurrency, config=config, mode=mode)
 
 
 class AlphaConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, event_log: pd.DataFrame, config: Configuration):
+    def __init__(self, event_log: pd.DataFrame, config: Configuration, mode: Mode = Mode.PARALLEL):
         # Alpha concurrency
         # Initialize dictionary for directly-follows relations df_relations[A][B] = number of times B following A
         df_relations = _get_df_relations(event_log, config.log_ids)
@@ -118,7 +144,7 @@ class AlphaConcurrencyOracle(ConcurrencyOracle):
                     # Concurrency relation AB, add it to A
                     concurrency[act_a].add(act_b)
         # Super
-        super(AlphaConcurrencyOracle, self).__init__(concurrency, config)
+        super(AlphaConcurrencyOracle, self).__init__(concurrency=concurrency, config=config, mode=mode)
 
 
 def _get_df_relations(event_log: pd.DataFrame, log_ids: EventLogIDs) -> dict:
@@ -135,7 +161,7 @@ def _get_df_relations(event_log: pd.DataFrame, log_ids: EventLogIDs) -> dict:
 
 
 class HeuristicsConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, event_log: pd.DataFrame, config: Configuration):
+    def __init__(self, event_log: pd.DataFrame, config: Configuration, mode: Mode = Mode.PARALLEL):
         # Heuristics concurrency
         activities = event_log[config.log_ids.activity].unique()
         # Get matrices for:
@@ -160,7 +186,7 @@ class HeuristicsConcurrencyOracle(ConcurrencyOracle):
                     # Concurrency relation AB, add it to A
                     concurrency[act_a].add(act_b)
         # Super
-        super(HeuristicsConcurrencyOracle, self).__init__(concurrency, config)
+        super(HeuristicsConcurrencyOracle, self).__init__(concurrency=concurrency, config=config, mode=mode)
 
 
 def _get_heuristics_matrices(event_log: pd.DataFrame, activities: list, config: Configuration) -> (dict, dict, dict):
@@ -220,7 +246,9 @@ def _get_heuristics_matrices(event_log: pd.DataFrame, activities: list, config: 
 
 
 class OverlappingConcurrencyOracle(ConcurrencyOracle):
-    def __init__(self, event_log: pd.DataFrame, config: Configuration, optimized: bool = False):
+    def __init__(
+        self, event_log: pd.DataFrame, config: Configuration, optimized: bool = False, mode: Mode = Mode.PARALLEL
+    ):
         # Get the activity labels
         activities = set(event_log[config.log_ids.activity])
         # Get matrix with the frequency of each activity happening overlapping with the rest and in directly-follows order
@@ -254,7 +282,7 @@ class OverlappingConcurrencyOracle(ConcurrencyOracle):
         # Set flag to consider start times also when individually checking enabled time
         config.consider_start_times = True
         # Super
-        super(OverlappingConcurrencyOracle, self).__init__(concurrency, config)
+        super(OverlappingConcurrencyOracle, self).__init__(concurrency=concurrency, config=config, mode=mode)
 
 
 def _get_overlapping_matrix(event_log: pd.DataFrame, activities: set, config: Configuration) -> dict:

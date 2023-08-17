@@ -21,7 +21,7 @@ def _add_enabled_times(log: pd.DataFrame, log_ids: EventLogIDs):
         concurrency_thresholds=ConcurrencyThresholds(df=0.75),
         consider_start_times=True,
     )
-    OverlappingConcurrencyOracle(log, configuration).add_enabled_times(log, mode=Mode.ORIGINAL)
+    OverlappingConcurrencyOracle(log, configuration, mode=Mode.ORIGINAL).add_enabled_times(log)
 
 
 def _add_enabled_times_parallel(log: pd.DataFrame, log_ids: EventLogIDs):
@@ -30,7 +30,7 @@ def _add_enabled_times_parallel(log: pd.DataFrame, log_ids: EventLogIDs):
         concurrency_thresholds=ConcurrencyThresholds(df=0.75),
         consider_start_times=True,
     )
-    OverlappingConcurrencyOracle(log, configuration, optimized=True).add_enabled_times(log, mode=Mode.PARALLEL)
+    OverlappingConcurrencyOracle(log, configuration, mode=Mode.PARALLEL, optimized=True).add_enabled_times(log)
 
 
 def _add_enabled_times_parallel_polars(log: pd.DataFrame, log_ids: EventLogIDs):
@@ -39,14 +39,14 @@ def _add_enabled_times_parallel_polars(log: pd.DataFrame, log_ids: EventLogIDs):
         concurrency_thresholds=ConcurrencyThresholds(df=0.75),
         consider_start_times=True,
     )
-    OverlappingConcurrencyOracle(log, configuration, optimized=True).add_enabled_times(log, mode=Mode.PARALLEL_POLARS)
+    OverlappingConcurrencyOracle(log, configuration, mode=Mode.PARALLEL_POLARS, optimized=True).add_enabled_times(log)
 
 
 test_data = [
     {
         "log_path": assets_dir / "test_event_log_3_noise.csv",
         "log_ids": DEFAULT_CSV_IDS,
-    }
+    },
 ]
 
 test_data_simple = [
@@ -55,48 +55,6 @@ test_data_simple = [
         "log_ids": DEFAULT_CSV_IDS,
     }
 ]
-
-
-@pytest.mark.parametrize(
-    "test_data_",
-    test_data,
-    ids=[item["log_path"].stem for item in test_data],
-)
-def test_enabled_times_discovery(test_data_):
-    log_ids = test_data_["log_ids"]
-    log = read_csv_log(test_data_["log_path"], log_ids)
-
-    _add_enabled_times(log, log_ids)
-
-    assert log[log_ids.enabled_time].isna().sum() == 0
-
-
-@pytest.mark.parametrize(
-    "test_data_",
-    test_data,
-    ids=[item["log_path"].stem for item in test_data],
-)
-def test_enabled_times_discovery_parallel(test_data_):
-    log_ids = test_data_["log_ids"]
-    log = read_csv_log(test_data_["log_path"], log_ids)
-
-    _add_enabled_times_parallel(log, log_ids)
-
-    assert log[log_ids.enabled_time].isna().sum() == 0
-
-
-@pytest.mark.parametrize(
-    "test_data_",
-    test_data,
-    ids=[item["log_path"].stem for item in test_data],
-)
-def test_enabled_times_discovery_parallel_optimized(test_data_):
-    log_ids = test_data_["log_ids"]
-    log = read_csv_log(test_data_["log_path"], log_ids)
-
-    _add_enabled_times_parallel_polars(log, log_ids)
-
-    assert log[log_ids.enabled_time].isna().sum() == 0
 
 
 @pytest.mark.parametrize(
