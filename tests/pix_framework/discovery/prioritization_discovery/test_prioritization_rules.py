@@ -236,8 +236,18 @@ def test__reverse_one_hot_encoding():
 
 def sort_rules(rules):
     sorted_by_level = sorted(rules, key=lambda x: x["priority_level"])
-    sorted_by_rules_attribute = [
-        {"priority_level": rule["priority_level"], "rules": sorted(rule["rules"], key=lambda x: x[0]["attribute"])}
-        for rule in sorted_by_level
-    ]
+    sorted_by_rules_attribute = []
+    # For each priority level
+    for level in sorted_by_level:
+        # Sort the rule sublists within this list
+        rule_list = [sorted(rule_sublist, key=lambda x: x["attribute"]) for rule_sublist in level["rules"]]
+        # Sort the list of (sorted) rule sublists
+        sorted_rule_list = sorted(rule_list, key=lambda x: " ".join([rule["attribute"] for rule in x]))
+        # Add priority level back
+        sorted_by_rules_attribute += [
+            {
+                "priority_level": level["priority_level"],
+                "rules": sorted_rule_list
+            }
+        ]
     return sorted_by_rules_attribute

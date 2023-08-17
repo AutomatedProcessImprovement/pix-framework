@@ -30,6 +30,22 @@ def test_discover_case_arrival_model(log_name):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("log_name", ["Arrival_test_fixed.csv", "Arrival_test_normal.csv"])
+def test_discover_case_arrival_model_with_observed_distribution(log_name):
+    log_path = assets_dir / log_name
+    log_ids = APROMORE_LOG_IDS
+    # Read event log
+    log = read_csv_log(log_path, log_ids)
+    # Discover arrival calendar
+    result = discover_case_arrival_model(log, log_ids, use_observed_arrival_distribution=True)
+    # Assert
+    assert type(result) is CaseArrivalModel
+    assert type(result.case_arrival_calendar) is RCalendar
+    assert result.inter_arrival_times is not None
+    assert result.inter_arrival_times["distribution_name"] in ["histogram_sampling"]
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("log_name", ["Arrival_test_fixed.csv"])
 def test_discover_case_arrival_calendar_business_hours(log_name):
     log_path = assets_dir / log_name

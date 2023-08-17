@@ -7,10 +7,7 @@ import pandas as pd
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.calendar_factory import CalendarFactory
 from pix_framework.io.event_log import EventLogIDs
-from pix_framework.statistics.distribution import (
-    get_best_fitting_distribution,
-    get_observations_histogram,
-)
+from pix_framework.statistics.distribution import get_best_fitting_distribution, get_observations_histogram
 
 
 @dataclass
@@ -50,6 +47,7 @@ def discover_case_arrival_model(
     log_ids: EventLogIDs,
     granularity=60,
     filter_outliers: bool = True,
+    use_observed_arrival_distribution: bool = False,
 ) -> CaseArrivalModel:
     """
     Discover the case arrival model associated to the given event log.
@@ -59,12 +57,28 @@ def discover_case_arrival_model(
     :param granularity: number of minutes to take as minimum available interval surrounding each
                         observed arrival for the calendar.
     :param filter_outliers: flag to remove outlier in the inter-arrival time discovery.
+    :param use_observed_arrival_distribution: flag to compute the histogram of observed inter-arrival durations
+                                              to model the inter-arrival times, instead of inferring a parameterized
+                                              distribution.
 
     :return: case arrival model.
     """
+    arrival_calendar = discover_case_arrival_calendar(event_log, log_ids, granularity)
+    if use_observed_arrival_distribution:
+        arrival_distribution = get_observed_inter_arrival_distribution(
+            event_log=event_log,
+            log_ids=log_ids,
+            filter_outliers=filter_outliers,
+        )
+    else:
+        arrival_distribution = discover_inter_arrival_distribution(
+            event_log=event_log,
+            log_ids=log_ids,
+            filter_outliers=filter_outliers,
+        )
     return CaseArrivalModel(
-        case_arrival_calendar=discover_case_arrival_calendar(event_log, log_ids, granularity),
-        inter_arrival_times=discover_inter_arrival_distribution(event_log, log_ids, filter_outliers),
+        case_arrival_calendar=arrival_calendar,
+        inter_arrival_times=arrival_distribution,
     )
 
 
@@ -100,7 +114,9 @@ def discover_case_arrival_calendar(event_log: pd.DataFrame, log_ids: EventLogIDs
 
 
 def discover_inter_arrival_distribution(
-    event_log: pd.DataFrame, log_ids: EventLogIDs, filter_outliers: bool = True
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    filter_outliers: bool = True
 ) -> dict:
     """
     Discover case inter-arrival duration distribution for the event log.
