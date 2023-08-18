@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-
 from pix_framework.discovery.calendar_factory import CalendarFactory
 
 assets_dir = Path(__file__).parent.parent / "assets"
@@ -30,7 +29,7 @@ def test_calendar_module():
     calendar = {}
     for resource_id in calendar_candidates:
         if calendar_candidates[resource_id] is not None:
-            calendar[resource_id] = calendar_candidates[resource_id].to_json()
+            calendar[resource_id] = calendar_candidates[resource_id].intervals_to_json()
 
     assert len(calendar) > 0
     assert "Kim Passa" in calendar

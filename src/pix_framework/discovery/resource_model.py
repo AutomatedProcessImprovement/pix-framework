@@ -26,14 +26,7 @@ class ResourceModel:
     def to_dict(self) -> dict:
         return {
             "resource_profiles": [resource_profile.to_dict() for resource_profile in self.resource_profiles],
-            "resource_calendars": [
-                {
-                    "id": calendar.calendar_id,
-                    "name": calendar.calendar_id,
-                    "time_periods": calendar.to_json(),
-                }
-                for calendar in self.resource_calendars
-            ],
+            "resource_calendars": [calendar.to_dict() for calendar in self.resource_calendars],
             "task_resource_distribution": [
                 activity_resources.to_dict() for activity_resources in self.activity_resource_distributions
             ],
@@ -41,17 +34,7 @@ class ResourceModel:
 
     @staticmethod
     def from_dict(resource_model: dict) -> "ResourceModel":
-        calendars = []
-        for calendar_dict in resource_model["resource_calendars"]:
-            calendar = RCalendar(calendar_id=calendar_dict["id"])
-            for time_period in calendar_dict["time_periods"]:
-                calendar.add_calendar_item(
-                    from_day=time_period["from"],
-                    to_day=time_period["to"],
-                    begin_time=time_period["beginTime"],
-                    end_time=time_period["endTime"],
-                )
-            calendars += [calendar]
+        calendars = [RCalendar.from_dict(calendar_dict) for calendar_dict in resource_model["resource_calendars"]]
 
         return ResourceModel(
             resource_profiles=[

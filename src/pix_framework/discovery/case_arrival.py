@@ -21,7 +21,7 @@ class CaseArrivalModel:
 
     def to_dict(self) -> dict:
         return {
-            "arrival_time_calendar": self.case_arrival_calendar.to_json(),
+            "arrival_time_calendar": self.case_arrival_calendar.intervals_to_json(),
             "arrival_time_distribution": self.inter_arrival_times,
         }
 
