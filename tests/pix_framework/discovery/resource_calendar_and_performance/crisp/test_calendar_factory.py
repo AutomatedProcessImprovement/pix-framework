@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from pix_framework.discovery.calendar_factory import CalendarFactory
+from pix_framework.discovery.resource_calendar_and_performance.crisp.factory import CalendarFactory
 
-assets_dir = Path(__file__).parent.parent / "assets"
+assets_dir = Path(__file__).parent.parent.parent.parent / "assets"
 
 
 @pytest.mark.integration

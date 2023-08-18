@@ -6,7 +6,7 @@ from pix_framework.calendar.availability import (
     absolute_unavailability_intervals_within,
     get_last_available_timestamp,
 )
-from pix_framework.calendar.resource_calendar import Interval, RCalendar
+from pix_framework.calendar.crisp_resource_calendar import Interval, RCalendar
 
 _def_tz = pytz.timezone("UTC")
 

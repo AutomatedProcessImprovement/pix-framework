@@ -1,13 +1,15 @@
 from pathlib import Path
 
 import pytest
-from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.resource_calendars import (
-    CalendarDiscoveryParams,
+from pix_framework.calendar.crisp_resource_calendar import RCalendar
+from pix_framework.discovery.calendar_discovery_parameters import (
+    CalendarDiscoveryParameters,
     CalendarType,
+)
+from pix_framework.discovery.resource_calendar_and_performance.crisp.discovery import (
     _discover_resource_calendars_per_profile,
     _discover_undifferentiated_resource_calendar,
-    discover_classic_resource_calendars_per_profile,
+    discover_crisp_resource_calendars_per_profile,
 )
 from pix_framework.discovery.resource_profiles import (
     discover_differentiated_resource_profiles,
@@ -15,7 +17,7 @@ from pix_framework.discovery.resource_profiles import (
 )
 from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
 
-assets_dir = Path(__file__).parent.parent / "assets"
+assets_dir = Path(__file__).parent.parent.parent.parent / "assets"
 
 
 @pytest.mark.integration
@@ -32,10 +34,10 @@ def test_discover_resource_calendars_per_profile(log_name):
         for resource in resource_profile.resources:
             assert resource.name in resource.calendar_id
     # Discover resource calendar per profile
-    result = discover_classic_resource_calendars_per_profile(
+    result = discover_crisp_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(CalendarType.UNDIFFERENTIATED),
+        params=CalendarDiscoveryParameters(CalendarType.UNDIFFERENTIATED),
         resource_profiles=resource_profiles,
     )
     assert len(result) == 1
@@ -55,7 +57,7 @@ def test_resource_discover_undifferentiated(log_name):
     log = read_csv_log(log_path, log_ids)
     # Discover resource calendar
     result = _discover_undifferentiated_resource_calendar(
-        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(), calendar_id="Undifferentiated_test"
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParameters(), calendar_id="Undifferentiated_test"
     )
     # Assert
     assert result
@@ -87,7 +89,7 @@ def test_resource_discover_per_resource_pool(log_name):
     # Discover resource calendar
     resource_profiles = discover_pool_resource_profiles(event_log=log, log_ids=log_ids)
     result = _discover_resource_calendars_per_profile(
-        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(), resource_profiles=resource_profiles
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParameters(), resource_profiles=resource_profiles
     )
     # Assert
     assert result
@@ -142,7 +144,7 @@ def test_resource_discover_per_resource(log_name):
     result = _discover_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(),
+        params=CalendarDiscoveryParameters(),
         resource_profiles=discover_differentiated_resource_profiles(event_log=log, log_ids=log_ids),
     )
 
