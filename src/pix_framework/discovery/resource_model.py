@@ -1,15 +1,28 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional, Union
 
 import pandas as pd
 
 from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution, \
-    discover_activity_resource_distribution
-from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType, \
-    discover_resource_calendars_per_profile
-from pix_framework.discovery.resource_profiles import ResourceProfile, discover_undifferentiated_resource_profile, \
-    discover_differentiated_resource_profiles, discover_pool_resource_profiles
+from pix_framework.discovery.fuzzy_calendars.discovery import (
+    FuzzyResourceCalendar,
+    discovery_fuzzy_simulation_parameters,
+)
+from pix_framework.discovery.resource_activity_performances import (
+    ActivityResourceDistribution,
+    discover_activity_resource_distribution,
+)
+from pix_framework.discovery.resource_calendars import (
+    CalendarDiscoveryParams,
+    CalendarType,
+    discover_classic_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_profiles import (
+    ResourceProfile,
+    discover_differentiated_resource_profiles,
+    discover_pool_resource_profiles,
+    discover_undifferentiated_resource_profile,
+)
 from pix_framework.io.event_log import EventLogIDs
 
 
@@ -20,7 +33,7 @@ class ResourceModel:
     """
 
     resource_profiles: List[ResourceProfile]
-    resource_calendars: List[RCalendar]
+    resource_calendars: Union[List[RCalendar], List[FuzzyResourceCalendar]]
     activity_resource_distributions: List[ActivityResourceDistribution]
 
     def to_dict(self) -> dict:
@@ -52,7 +65,7 @@ def discover_resource_model(
     event_log: pd.DataFrame,
     log_ids: EventLogIDs,
     params: CalendarDiscoveryParams,
-    provided_profiles: List[ResourceProfile] = None,
+    provided_profiles: Optional[List[ResourceProfile]] = None,
 ) -> ResourceModel:
     """
     Discover resource model parameters composed by the resource profiles, their calendars, and the resource-activity
@@ -67,36 +80,56 @@ def discover_resource_model(
 
     :return: class with the resource profiles, their calendars, and the resource-activity duration distributions.
     """
-    # --- Discover resource profiles --- #
-    calendar_type = params.discovery_type
-    if provided_profiles is not None:
-        resource_profiles = provided_profiles  # Skipping resource profile discovery, using provided
-    elif calendar_type in [CalendarType.DEFAULT_24_7, CalendarType.DEFAULT_9_5, CalendarType.UNDIFFERENTIATED]:
-        resource_profiles = [discover_undifferentiated_resource_profile(event_log, log_ids)]
-    elif calendar_type == CalendarType.DIFFERENTIATED_BY_RESOURCE:
-        resource_profiles = discover_differentiated_resource_profiles(event_log, log_ids)
-    elif calendar_type == CalendarType.DIFFERENTIATED_BY_POOL:
-        resource_profiles = discover_pool_resource_profiles(event_log, log_ids)
+    if params.discovery_type == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
+        assert (
+            log_ids.enabled_time in event_log.columns and not event_log[log_ids.enabled_time].isna().any()
+        ), "Enabled time must be present in the event log for fuzzy calendars discovery"
+
+    if provided_profiles is None:
+        resource_profiles = _discover_resource_profiles(params.discovery_type, event_log, log_ids)
+        assert len(resource_profiles) > 0, "No resource profiles found"
     else:
-        raise ValueError(f"Unknown calendar discovery type: {calendar_type}")
-    # Assert there are discovered resource profiles
-    assert len(resource_profiles) > 0, "No resource profiles found"
+        resource_profiles = provided_profiles  # Skipping resource profile discovery, using provided
 
-    # --- Discover resource calendars for each profile --- #
-    resource_calendars = discover_resource_calendars_per_profile(event_log, log_ids, params, resource_profiles)
-    # Assert there are discovered resource calendars
+    if params.discovery_type == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
+        # Fuzzy resource calendars and activity-resource distribution discovery
+        default_granularity = 15
+        resource_calendars, activity_resource_distributions = discovery_fuzzy_simulation_parameters(
+            log=event_log, log_ids=log_ids, granularity=params.granularity or default_granularity
+        )
+    else:
+        # CRISP or Classic resource calendars and activity-resource distribution discovery
+        resource_calendars = discover_classic_resource_calendars_per_profile(
+            event_log, log_ids, params, resource_profiles
+        )
+        activity_resource_distributions = discover_activity_resource_distribution(
+            event_log, log_ids, resource_profiles, resource_calendars
+        )
     assert len(resource_calendars) > 0, "No resource calendars found"
-
-    # --- Discover activity-resource performances given the resource profiles and calendars --- #
-    activity_resource_distributions = discover_activity_resource_distribution(
-        event_log, log_ids, resource_profiles, resource_calendars
-    )
-    # Assert there are discovered activity-resource performance
     assert len(activity_resource_distributions) > 0, "No activity resource distributions found"
 
-    # --- Return resource model --- #
     return ResourceModel(
         resource_profiles=resource_profiles,
         resource_calendars=resource_calendars,
         activity_resource_distributions=activity_resource_distributions,
     )
+
+
+def _discover_resource_profiles(
+    calendar_type: CalendarType,
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+) -> List[ResourceProfile]:
+    if calendar_type in [
+        CalendarType.DEFAULT_24_7,
+        CalendarType.DEFAULT_9_5,
+        CalendarType.UNDIFFERENTIATED,
+    ]:
+        resource_profiles = [discover_undifferentiated_resource_profile(event_log, log_ids)]
+    elif calendar_type in [CalendarType.DIFFERENTIATED_BY_RESOURCE, CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY]:
+        resource_profiles = discover_differentiated_resource_profiles(event_log, log_ids)
+    elif calendar_type in [CalendarType.DIFFERENTIATED_BY_POOL]:
+        resource_profiles = discover_pool_resource_profiles(event_log, log_ids)
+    else:
+        raise ValueError(f"Unknown calendar discovery type: {calendar_type}")
+    return resource_profiles

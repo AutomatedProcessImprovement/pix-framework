@@ -6,6 +6,7 @@ import pandas as pd
 
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.calendar_factory import CalendarFactory
+from pix_framework.discovery.fuzzy_calendars.proccess import Method
 from pix_framework.discovery.resource_profiles import ResourceProfile
 from pix_framework.io.event_log import EventLogIDs
 
@@ -16,6 +17,7 @@ class CalendarType(str, Enum):
     UNDIFFERENTIATED = "undifferentiated"
     DIFFERENTIATED_BY_POOL = "differentiated_by_pool"
     DIFFERENTIATED_BY_RESOURCE = "differentiated_by_resource"
+    DIFFERENTIATED_BY_RESOURCE_FUZZY = "differentiated_by_resource_fuzzy"
 
     @classmethod
     def from_str(cls, value: str) -> "CalendarType":
@@ -29,6 +31,8 @@ class CalendarType(str, Enum):
             return cls.DIFFERENTIATED_BY_POOL
         elif value.lower() in ("differentiated_by_resource", "differentiated"):
             return cls.DIFFERENTIATED_BY_RESOURCE
+        elif value.lower() in ("differentiated_by_resource_fuzzy", "differentiated_fuzzy"):
+            return cls.DIFFERENTIATED_BY_RESOURCE_FUZZY
         else:
             raise ValueError(f"Unknown value {value}")
 
@@ -43,6 +47,8 @@ class CalendarType(str, Enum):
             return "differentiated_by_pool"
         elif self == CalendarType.DIFFERENTIATED_BY_RESOURCE:
             return "differentiated_by_resource"
+        elif self == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
+            return "differentiated_by_resource_fuzzy"
         return f"Unknown CalendarType {str(self)}"
 
 
@@ -54,10 +60,13 @@ class CalendarDiscoveryParams:
     support: Optional[float] = 0.1  # from 0 to 1.0
     participation: Optional[float] = 0.4  # from 0 to 1.0
 
+    # Parameters unique to fuzzy calendars (it uses granularity too)
+    fuzzy_method: Optional[Method] = Method.TRAPEZOIDAL
+    angle: Optional[float] = 1.0
+
     def to_dict(self) -> dict:
-        # Save discovery type
         calendar_discovery_params = {"discovery_type": self.discovery_type.value}
-        # Add calendar discovery parameters if any
+
         if self.discovery_type in [
             CalendarType.UNDIFFERENTIATED,
             CalendarType.DIFFERENTIATED_BY_RESOURCE,
@@ -67,7 +76,11 @@ class CalendarDiscoveryParams:
             calendar_discovery_params["confidence"] = self.confidence
             calendar_discovery_params["support"] = self.support
             calendar_discovery_params["participation"] = self.participation
-        # Return dict
+        elif self.discovery_type == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
+            calendar_discovery_params["granularity"] = self.granularity
+            calendar_discovery_params["fuzzy_method"] = self.fuzzy_method.value
+            calendar_discovery_params["angle"] = self.angle
+
         return calendar_discovery_params
 
     @staticmethod
@@ -76,6 +89,9 @@ class CalendarDiscoveryParams:
         confidence = None
         support = None
         participation = None
+        fuzzy_method = None
+        angle = None
+
         # If the discovery type implies a discovery, parse parameters
         if calendar_discovery_params["discovery_type"] in [
             CalendarType.UNDIFFERENTIATED,
@@ -86,17 +102,23 @@ class CalendarDiscoveryParams:
             confidence = calendar_discovery_params["confidence"]
             support = calendar_discovery_params["support"]
             participation = calendar_discovery_params["participation"]
-        # Return parameters instance
+        elif calendar_discovery_params["discovery_type"] == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
+            granularity = calendar_discovery_params["granularity"]
+            fuzzy_method = Method.from_str(calendar_discovery_params["fuzzy_method"])
+            angle = calendar_discovery_params["angle"]
+
         return CalendarDiscoveryParams(
             discovery_type=calendar_discovery_params["discovery_type"],
             granularity=granularity,
             confidence=confidence,
             support=support,
             participation=participation,
+            fuzzy_method=fuzzy_method,
+            angle=angle,
         )
 
 
-def discover_resource_calendars_per_profile(
+def discover_classic_resource_calendars_per_profile(
     event_log: pd.DataFrame,
     log_ids: EventLogIDs,
     params: CalendarDiscoveryParams,
@@ -123,13 +145,13 @@ def discover_resource_calendars_per_profile(
     calendar_type = params.discovery_type
     if calendar_type == CalendarType.DEFAULT_24_7:
         # 24/7 calendar to all resource profiles
-        full_day_calendar = create_full_day_calendar()
+        full_day_calendar = _create_full_day_calendar()
         resource_calendars = [full_day_calendar]
         # Update calendar ID of all resources
         _update_resource_calendars(resource_profiles, full_day_calendar.calendar_id)
     elif calendar_type == CalendarType.DEFAULT_9_5:
         # 9 to 5 calendar per resource profile
-        working_hours_calendar = create_working_hours_calendar()
+        working_hours_calendar = _create_working_hours_calendar()
         resource_calendars = [working_hours_calendar]
         # Update calendar ID of all resources
         _update_resource_calendars(resource_profiles, working_hours_calendar.calendar_id)
@@ -138,15 +160,19 @@ def discover_resource_calendars_per_profile(
         undifferentiated_calendar = _discover_undifferentiated_resource_calendar(event_log, log_ids, params)
         # Set default 24/7 if could not discover one
         if undifferentiated_calendar is None:
-            undifferentiated_calendar = create_full_day_calendar()
+            undifferentiated_calendar = _create_full_day_calendar()
         # Save discovered calendar
         resource_calendars = [undifferentiated_calendar]
         # Update calendar ID of all resources
         _update_resource_calendars(resource_profiles, undifferentiated_calendar.calendar_id)
-    else:
-        # Discover a resource calendar per resource profile
+    elif calendar_type in [
+        CalendarType.DIFFERENTIATED_BY_POOL,
+        CalendarType.DIFFERENTIATED_BY_RESOURCE,
+    ]:
         resource_calendars = _discover_resource_calendars_per_profile(event_log, log_ids, params, resource_profiles)
-    # Return discovered resource calendars
+    else:
+        raise ValueError(f"Unknown calendar type for classic resource calendar discovery: {calendar_type}")
+
     return resource_calendars
 
 
@@ -241,7 +267,7 @@ def _discover_resource_calendars_per_profile(
             missing_resource_calendar = _discover_undifferentiated_resource_calendar(event_log, log_ids, params)
             if missing_resource_calendar is None:
                 # Could not discover calendar for all the resources in the log, assign default 24/7
-                missing_resource_calendar = create_full_day_calendar()
+                missing_resource_calendar = _create_full_day_calendar()
         # Add grouped calendar to discovered resource calendars
         resource_calendars += [missing_resource_calendar]
         # Set common calendar id to missing resources
@@ -256,7 +282,7 @@ def _update_resource_calendars(resource_profiles: List[ResourceProfile], calenda
             resource.calendar_id = calendar_id
 
 
-def create_full_day_calendar(schedule_id: str = "24_7_CALENDAR") -> RCalendar:
+def _create_full_day_calendar(schedule_id: str = "24_7_CALENDAR") -> RCalendar:
     schedule = RCalendar(schedule_id)
     schedule.add_calendar_item(
         from_day="MONDAY",
@@ -267,7 +293,7 @@ def create_full_day_calendar(schedule_id: str = "24_7_CALENDAR") -> RCalendar:
     return schedule
 
 
-def create_working_hours_calendar(schedule_id: str = "9_5_CALENDAR") -> RCalendar:
+def _create_working_hours_calendar(schedule_id: str = "9_5_CALENDAR") -> RCalendar:
     schedule = RCalendar(schedule_id)
     schedule.add_calendar_item(
         from_day="MONDAY",

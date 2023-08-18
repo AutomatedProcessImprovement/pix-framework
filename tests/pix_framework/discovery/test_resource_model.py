@@ -1,12 +1,16 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from pix_framework.calendar.resource_calendar import RCalendar
 from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution
 from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.io.event_log import APROMORE_LOG_IDS, DEFAULT_XES_IDS, read_csv_log
+from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
+from pix_framework.discovery.start_time_estimator.config import ConcurrencyThresholds
+from pix_framework.discovery.start_time_estimator.config import Configuration as StartTimeEstimatorConfiguration
+from pix_framework.io.event_log import APROMORE_LOG_IDS, DEFAULT_XES_IDS, EventLogIDs, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
@@ -199,3 +203,32 @@ def test_resource_profiles_complete():
     )
     # Ensure "9264148" in resource_profiles
     assert any([resource_id in [r.id for r in rp.resources] for rp in model.resource_profiles])
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("log_name", ["Resource_profiles_test.csv"])
+def test_discover_fuzzy_resource_model(log_name):
+    log_path = assets_dir / log_name
+    log_ids = APROMORE_LOG_IDS
+    log = read_csv_log(log_path, log_ids)
+    _add_enabled_times(log, log_ids)
+
+    result = discover_resource_model(
+        event_log=log,
+        log_ids=log_ids,
+        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY),
+    )
+
+    assert len(result.resource_profiles) == 3
+    # Check the discovery type flag works and discovers fuzzy calendars with probabilities field present
+    assert result.resource_calendars[0].intervals[0].probability == 1.0
+
+
+def _add_enabled_times(log: pd.DataFrame, log_ids: EventLogIDs):
+    configuration = StartTimeEstimatorConfiguration(
+        log_ids=log_ids,
+        concurrency_thresholds=ConcurrencyThresholds(df=0.75),
+        consider_start_times=True,
+    )
+    # The start times are the original ones, so use overlapping concurrency oracle
+    OverlappingConcurrencyOracle(log, configuration).add_enabled_times(log)
