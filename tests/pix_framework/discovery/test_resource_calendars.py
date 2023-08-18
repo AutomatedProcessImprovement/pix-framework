@@ -1,41 +1,42 @@
 from pathlib import Path
 
 import pytest
-
 from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.resource_calendars import _discover_undifferentiated_resource_calendar, \
-    _discover_resource_calendars_per_profile, CalendarDiscoveryParams, discover_resource_calendars_per_profile, \
-    CalendarType
-from pix_framework.discovery.resource_profiles import discover_pool_resource_profiles, \
-    discover_differentiated_resource_profiles
-from pix_framework.io.event_log import read_csv_log
-from pix_framework.io.event_log import APROMORE_LOG_IDS
+from pix_framework.discovery.resource_calendars import (
+    CalendarDiscoveryParams,
+    CalendarType,
+    _discover_resource_calendars_per_profile,
+    _discover_undifferentiated_resource_calendar,
+    discover_classic_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_profiles import (
+    discover_differentiated_resource_profiles,
+    discover_pool_resource_profiles,
+)
+from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('log_name', ['Resource_profiles_calendar_test.csv'])
+@pytest.mark.parametrize("log_name", ["Resource_profiles_calendar_test.csv"])
 def test_discover_resource_calendars_per_profile(log_name):
     log_path = assets_dir / log_name
     log_ids = APROMORE_LOG_IDS
     # Read event log
     log = read_csv_log(log_path, log_ids)
     # Discover profiles
-    resource_profiles = discover_differentiated_resource_profiles(
-        event_log=log,
-        log_ids=log_ids
-    )
+    resource_profiles = discover_differentiated_resource_profiles(event_log=log, log_ids=log_ids)
     # Assert their old calendar IDs
     for resource_profile in resource_profiles:
         for resource in resource_profile.resources:
             assert resource.name in resource.calendar_id
     # Discover resource calendar per profile
-    result = discover_resource_calendars_per_profile(
+    result = discover_classic_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
         params=CalendarDiscoveryParams(CalendarType.UNDIFFERENTIATED),
-        resource_profiles=resource_profiles
+        resource_profiles=resource_profiles,
     )
     assert len(result) == 1
     discovered_calendar_id = result[0].calendar_id
@@ -46,7 +47,7 @@ def test_discover_resource_calendars_per_profile(log_name):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('log_name', ['Resource_profiles_calendar_test.csv'])
+@pytest.mark.parametrize("log_name", ["Resource_profiles_calendar_test.csv"])
 def test_resource_discover_undifferentiated(log_name):
     log_path = assets_dir / log_name
     log_ids = APROMORE_LOG_IDS
@@ -54,10 +55,7 @@ def test_resource_discover_undifferentiated(log_name):
     log = read_csv_log(log_path, log_ids)
     # Discover resource calendar
     result = _discover_undifferentiated_resource_calendar(
-        event_log=log,
-        log_ids=log_ids,
-        params=CalendarDiscoveryParams(),
-        calendar_id="Undifferentiated_test"
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(), calendar_id="Undifferentiated_test"
     )
     # Assert
     assert result
@@ -80,22 +78,16 @@ def test_resource_discover_undifferentiated(log_name):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('log_name', ['Resource_profiles_calendar_test.csv'])
+@pytest.mark.parametrize("log_name", ["Resource_profiles_calendar_test.csv"])
 def test_resource_discover_per_resource_pool(log_name):
     log_path = assets_dir / log_name
     log_ids = APROMORE_LOG_IDS
     # Read event log
     log = read_csv_log(log_path, log_ids)
     # Discover resource calendar
-    resource_profiles = discover_pool_resource_profiles(
-        event_log=log,
-        log_ids=log_ids
-    )
+    resource_profiles = discover_pool_resource_profiles(event_log=log, log_ids=log_ids)
     result = _discover_resource_calendars_per_profile(
-        event_log=log,
-        log_ids=log_ids,
-        params=CalendarDiscoveryParams(),
-        resource_profiles=resource_profiles
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(), resource_profiles=resource_profiles
     )
     # Assert
     assert result
@@ -140,7 +132,7 @@ def test_resource_discover_per_resource_pool(log_name):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('log_name', ['Resource_profiles_calendar_test.csv'])
+@pytest.mark.parametrize("log_name", ["Resource_profiles_calendar_test.csv"])
 def test_resource_discover_per_resource(log_name):
     log_path = assets_dir / log_name
     log_ids = APROMORE_LOG_IDS
@@ -151,10 +143,7 @@ def test_resource_discover_per_resource(log_name):
         event_log=log,
         log_ids=log_ids,
         params=CalendarDiscoveryParams(),
-        resource_profiles=discover_differentiated_resource_profiles(
-            event_log=log,
-            log_ids=log_ids
-        )
+        resource_profiles=discover_differentiated_resource_profiles(event_log=log, log_ids=log_ids),
     )
 
     # Assert
