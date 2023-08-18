@@ -3,6 +3,7 @@ from enum import Enum
 
 import pandas as pd
 import pytz
+
 from pix_framework.io.event_log import EventLogIDs
 
 
@@ -106,7 +107,10 @@ class Process:
         self.res_busy = {resource_name: {} for resource_name in self.log[self.log_ids.resource].unique()}
 
         for event in self.log[[self.log_ids.resource, self.log_ids.start_time, self.log_ids.end_time]].itertuples():
-            self._check_busy_intervals(event.start_time, event.end_time, self.res_busy[event.resource])
+            start_time = getattr(event, self.log_ids.start_time)
+            end_time = getattr(event, self.log_ids.end_time)
+            resource_name = getattr(event, self.log_ids.resource)
+            self._check_busy_intervals(start_time, end_time, self.res_busy[resource_name])
 
     def _observed_timestamps(self, from_date, to_date, r_id, t_id, is_working):
         if not is_working:
