@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import pandas as pd
+
 from pix_framework.calendar.resource_calendar import int_week_days, str_week_days
 from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution
 from pix_framework.io.event_log import EventLogIDs
@@ -28,12 +29,7 @@ class FuzzyInterval:
     probability: float
 
     def __init__(
-        self,
-        from_day: int,
-        to_day: int,
-        start_time: pd.Timestamp,
-        end_time: pd.Timestamp,
-        probability: float
+        self, from_day: int, to_day: int, start_time: pd.Timestamp, end_time: pd.Timestamp, probability: float
     ):
         self._from_day = from_day
         self._to_day = to_day
@@ -109,6 +105,40 @@ class FuzzyResourceCalendar:
         )
 
 
+def discovery_fuzzy_simulation_parameters(
+    log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    granularity=15,
+    angle=0.0,
+) -> tuple[list[FuzzyResourceCalendar], list[ActivityResourceDistribution]]:
+    """
+    Discovers fuzzy simulation parameters from an event log.
+    NOTE: Enabled time must be present in the event log.
+    """
+    activity_resources = _get_activities_resources(log, log_ids)
+
+    process = Process(granularity, activity_resources, log, log_ids, True, Method.TRAPEZOIDAL, angle=angle)
+    fuzzy_factory = FuzzyFactory(process)
+
+    # discovery
+    process.fuzzy_calendars = fuzzy_factory.compute_resource_availability_calendars()
+    activity_resource_distributions_orlenys = fuzzy_factory.compute_processing_times(process.fuzzy_calendars)
+
+    # transform
+    resource_calendars = _join_fuzzy_calendar_intervals(process.fuzzy_calendars, process.i_size)
+    activity_resource_distributions_prosimos = _convert_fuzzy_activity_resource_distributions_to_prosimos(
+        activity_resource_distributions_orlenys, activity_resources
+    )
+
+    # convert to readable types
+    resource_calendars_typed = [FuzzyResourceCalendar.from_prosimos(c) for c in resource_calendars]
+    activity_resource_distributions = [
+        ActivityResourceDistribution.from_dict(d) for d in activity_resource_distributions_prosimos
+    ]
+
+    return resource_calendars_typed, activity_resource_distributions
+
+
 def _get_activities_resources(
     log: pd.DataFrame,
     log_ids: EventLogIDs,
@@ -130,45 +160,23 @@ def _get_activities_resources(
     return activities_resources
 
 
-def discovery_fuzzy_simulation_parameters(
-    log: pd.DataFrame,
-    log_ids: EventLogIDs,
-    task_ids_by_name: ActivityNameToIDMapping,
-    granularity=15,
-    angle=0.0,
-) -> tuple[list[FuzzyResourceCalendar], list[ActivityResourceDistribution]]:
-    """
-    Discovers fuzzy simulation parameters from an event log.
-    NOTE: Enabled time must be present in the event log.
-    """
-    activity_resources = _get_activities_resources(log, log_ids)
-
-    process = Process(granularity, activity_resources, log, log_ids, True, Method.TRAPEZOIDAL, angle=angle)
-    fuzzy_factory = FuzzyFactory(process)
-
-    # discovery
-    process.fuzzy_calendars = fuzzy_factory.compute_resource_availability_calendars()
-    activity_resource_distributions_orlenys = fuzzy_factory.compute_processing_times(process.fuzzy_calendars)
-
-    # transform
-    resource_calendars = _join_fuzzy_calendar_intervals(process.fuzzy_calendars, process.i_size)
-    activity_resource_distributions_prosimos = _convert_fuzzy_activity_resource_distributions_to_prosimos(
-        activity_resource_distributions_orlenys, activity_resources, task_ids_by_name
-    )
-
-    # convert to readable types
-    resource_calendars_typed = [FuzzyResourceCalendar.from_prosimos(c) for c in resource_calendars]
-    activity_resource_distributions = [
-        ActivityResourceDistribution.from_dict(d) for d in activity_resource_distributions_prosimos
-    ]
-
-    return resource_calendars_typed, activity_resource_distributions
+def _join_fuzzy_calendar_intervals(fuzzy_calendars, i_size):
+    resource_calendars = []
+    for r_id in fuzzy_calendars:
+        resource_calendars.append(
+            {
+                "id": "%s_timetable" % r_id,
+                "name": "%s_timetable" % r_id,
+                "time_periods": _sweep_line_intervals(fuzzy_calendars[r_id].res_absolute_prob, i_size),
+                "workload_ratio": _sweep_line_intervals(fuzzy_calendars[r_id].res_relative_prob, i_size),
+            }
+        )
+    return resource_calendars
 
 
 def _convert_fuzzy_activity_resource_distributions_to_prosimos(
     activity_resource_distributions: ActivityResourceDistributionOrlenys,
     activity_resources: ActivityResources,
-    activities_names_to_ids: ActivityNameToIDMapping,
 ):
     distributions = []
 
@@ -189,23 +197,9 @@ def _convert_fuzzy_activity_resource_distributions_to_prosimos(
                 }
             )
 
-        distributions.append({"task_id": activities_names_to_ids[activity_name], "resources": resources})
+        distributions.append({"task_id": activity_name, "resources": resources})
 
     return distributions
-
-
-def _join_fuzzy_calendar_intervals(fuzzy_calendars, i_size):
-    resource_calendars = []
-    for r_id in fuzzy_calendars:
-        resource_calendars.append(
-            {
-                "id": "%s_timetable" % r_id,
-                "name": "%s_timetable" % r_id,
-                "time_periods": _sweep_line_intervals(fuzzy_calendars[r_id].res_absolute_prob, i_size),
-                "workload_ratio": _sweep_line_intervals(fuzzy_calendars[r_id].res_relative_prob, i_size),
-            }
-        )
-    return resource_calendars
 
 
 def _sweep_line_intervals(prob_map, i_size):
