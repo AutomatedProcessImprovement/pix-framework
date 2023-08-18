@@ -438,7 +438,14 @@ class RCalendar:  # AvailabilityCalendar
             self.cumulative_work_durations[i] = []
             self.work_rest_count[i] = [0, to_seconds(1, "DAYS")]
 
-    def to_json(self):
+    def to_dict(self):
+        return {
+            "id": self.calendar_id,
+            "name": self.calendar_id,
+            "time_periods": self.intervals_to_json(),
+        }
+
+    def intervals_to_json(self):
         items = []
 
         for i in range(0, 7):
@@ -454,6 +461,18 @@ class RCalendar:  # AvailabilityCalendar
                     )
 
         return items
+
+    @staticmethod
+    def from_dict(calendar_dict):
+        calendar = RCalendar(calendar_dict["id"])
+        for time_period in calendar_dict["time_periods"]:
+            calendar.add_calendar_item(
+                time_period["from"],
+                time_period["to"],
+                time_period["beginTime"],
+                time_period["endTime"],
+            )
+        return calendar
 
     def is_empty(self):
         # Return false (no empty) if any interval in a week day

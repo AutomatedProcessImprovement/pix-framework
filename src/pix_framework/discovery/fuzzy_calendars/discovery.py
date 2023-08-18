@@ -84,6 +84,13 @@ class FuzzyResourceCalendar:
     intervals: list[FuzzyInterval]
     workloads: list[FuzzyInterval]
 
+    def to_dict(self) -> dict:  # NOTE: for compatibility with RCalendar that uses to_dict instead of to_prosimos
+        return self.to_prosimos()
+
+    @staticmethod  # NOTE: for compatibility with RCalendar that uses to_dict instead of to_prosimos
+    def from_dict(calendar: dict) -> "FuzzyResourceCalendar":
+        return FuzzyResourceCalendar.from_prosimos(calendar)
+
     def to_prosimos(self):
         return {
             "id": self.resource_id,
