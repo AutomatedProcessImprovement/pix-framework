@@ -6,13 +6,8 @@ from pix_framework.discovery.fuzzy_calendars.discovery import (
     discovery_fuzzy_simulation_parameters,
 )
 from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
-from pix_framework.discovery.start_time_estimator.config import (
-    ConcurrencyThresholds,
-)
-from pix_framework.discovery.start_time_estimator.config import (
-    Configuration as StartTimeEstimatorConfiguration,
-)
-from pix_framework.io.bpmn import get_activities_ids_by_name_from_bpmn
+from pix_framework.discovery.start_time_estimator.config import ConcurrencyThresholds
+from pix_framework.discovery.start_time_estimator.config import Configuration as StartTimeEstimatorConfiguration
 from pix_framework.io.event_log import PROSIMOS_LOG_IDS, EventLogIDs, read_csv_log
 
 assets_dir = Path(__file__).parent / "assets"
@@ -20,12 +15,10 @@ assets_dir = Path(__file__).parent / "assets"
 test_data = [
     {
         "log_path": assets_dir / "csv_logs/fuzzy_calendars_log.csv.gz",
-        "bpmn_path": assets_dir / "bpmn_models/fuzzy_calendars_model.bpmn",
         "error_threshold": 0.95,
     },
     {
         "log_path": assets_dir / "csv_logs/LoanApp_simplified.csv.gz",
-        "bpmn_path": assets_dir / "bpmn_models/LoanApp_simplified.bpmn",
         "error_threshold": 0.05,
     },
 ]
@@ -44,8 +37,6 @@ def test_fuzzy_calendar_discovery_from_df(test_data):
     log_path = test_data["log_path"]
     log = read_csv_log(log_path, PROSIMOS_LOG_IDS)
     _add_enabled_times(log, PROSIMOS_LOG_IDS)
-    bpmn_path = test_data["bpmn_path"]
-    activities_ids = get_activities_ids_by_name_from_bpmn(bpmn_path)
 
     # avoiding the applicant with low workload
     log = log[log[PROSIMOS_LOG_IDS.resource] != "Applicant-000001"]
@@ -54,7 +45,6 @@ def test_fuzzy_calendar_discovery_from_df(test_data):
     result, _ = discovery_fuzzy_simulation_parameters(
         log=log,
         log_ids=PROSIMOS_LOG_IDS,
-        task_ids_by_name=activities_ids,
     )
 
     # calculate error
