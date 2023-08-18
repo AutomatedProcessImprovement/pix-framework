@@ -1,60 +1,16 @@
-from dataclasses import dataclass
 from typing import List
 
 import pandas as pd
 
 from pix_framework.calendar.availability import absolute_unavailability_intervals_within
-from pix_framework.calendar.resource_calendar import RCalendar
+from pix_framework.calendar.crisp_resource_calendar import RCalendar
+from pix_framework.discovery.resource_activity_performance import ActivityResourceDistribution, ResourceDistribution
 from pix_framework.discovery.resource_profiles import ResourceProfile
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 
 
-@dataclass
-class ResourceDistribution:
-    """Resource is the item of activity-resource duration distribution for Prosimos."""
-
-    resource_id: str
-    distribution: dict
-
-    def to_dict(self) -> dict:
-        """Dictionary with the structure compatible with Prosimos:"""
-        return {"resource_id": self.resource_id} | self.distribution
-
-    @staticmethod
-    def from_dict(resource_distribution: dict) -> "ResourceDistribution":
-        return ResourceDistribution(
-            resource_id=resource_distribution["resource_id"],
-            distribution={key: resource_distribution[key] for key in resource_distribution if key != "resource_id"},
-        )
-
-
-@dataclass
-class ActivityResourceDistribution:
-    """Activity duration distribution per resource for Prosimos."""
-
-    activity_id: str
-    activity_resources_distributions: List[ResourceDistribution]
-
-    def to_dict(self) -> dict:
-        """Dictionary with the structure compatible with Prosimos:"""
-        return {
-            "task_id": self.activity_id,
-            "resources": [resource.to_dict() for resource in self.activity_resources_distributions],
-        }
-
-    @staticmethod
-    def from_dict(activity_resource_distribution: dict) -> "ActivityResourceDistribution":
-        return ActivityResourceDistribution(
-            activity_id=activity_resource_distribution["task_id"],
-            activity_resources_distributions=[
-                ResourceDistribution.from_dict(resource_distribution)
-                for resource_distribution in activity_resource_distribution["resources"]
-            ],
-        )
-
-
-def discover_activity_resource_distribution(
+def discover_crisp_activity_resource_distributions(
     event_log: pd.DataFrame,
     log_ids: EventLogIDs,
     resource_profiles: List[ResourceProfile],
@@ -77,7 +33,7 @@ def discover_activity_resource_distribution(
     activity_resource_distributions = {}
     for resource_profile in resource_profiles:
         assert (
-                len(resource_profile.resources) > 0
+            len(resource_profile.resources) > 0
         ), "Trying to compute activity performance of an empty resource profile."
         # Get the calendar of the resource profile
         calendar_id = resource_profile.resources[0].calendar_id
@@ -88,7 +44,7 @@ def discover_activity_resource_distribution(
         # Filter the log with activities performed by them
         filtered_event_log = event_log[
             event_log[log_ids.activity].isin(assigned_activities) & event_log[log_ids.resource].isin(resources)
-            ]
+        ]
         # For each assigned activity
         for activity_label, events in filtered_event_log.groupby(log_ids.activity):
             # Get their durations
@@ -97,8 +53,7 @@ def discover_activity_resource_distribution(
             duration_distribution = get_best_fitting_distribution(durations).to_prosimos_distribution()
             # Recover activity-resource distribution for this activity or create a new one
             activity_resource_distribution = activity_resource_distributions.get(
-                activity_label,
-                ActivityResourceDistribution(activity_label, [])
+                activity_label, ActivityResourceDistribution(activity_label, [])
             )
             # Append distribution to the durations of this activity (per resource)
             for resource in resources:

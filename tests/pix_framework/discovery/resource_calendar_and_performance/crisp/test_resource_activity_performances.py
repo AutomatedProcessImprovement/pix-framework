@@ -1,11 +1,15 @@
 from pathlib import Path
 
 import pytest
-from pix_framework.discovery.resource_activity_performances import discover_activity_resource_distribution
-from pix_framework.discovery.resource_calendars import (
-    CalendarDiscoveryParams,
+from pix_framework.discovery.calendar_discovery_parameters import (
+    CalendarDiscoveryParameters,
     CalendarType,
-    discover_classic_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_calendar_and_performance.crisp.discovery import (
+    discover_crisp_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_activity_performance import (
+    discover_crisp_activity_resource_distributions,
 )
 from pix_framework.discovery.resource_profiles import (
     discover_differentiated_resource_profiles,
@@ -14,7 +18,7 @@ from pix_framework.discovery.resource_profiles import (
 )
 from pix_framework.io.event_log import APROMORE_LOG_IDS, read_csv_log
 
-assets_dir = Path(__file__).parent.parent / "assets"
+assets_dir = Path(__file__).parent.parent.parent.parent / "assets"
 
 
 @pytest.mark.integration
@@ -27,13 +31,13 @@ def test_discover_resource_activity_performances_undifferentiated(log_name):
 
     # Discover resource-activity distributions based on undifferentiated profile and 24/7 calendar
     resource_profiles = [discover_undifferentiated_resource_profile(event_log=log, log_ids=log_ids)]
-    resource_calendars = discover_classic_resource_calendars_per_profile(
+    resource_calendars = discover_crisp_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DEFAULT_24_7),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DEFAULT_24_7),
         resource_profiles=resource_profiles,
     )
-    activity_resource_distributions = discover_activity_resource_distribution(
+    activity_resource_distributions = discover_crisp_activity_resource_distributions(
         event_log=log, log_ids=log_ids, resource_profiles=resource_profiles, resource_calendars=resource_calendars
     )
     # Assert
@@ -59,13 +63,13 @@ def test_discover_resource_activity_performances_differentiated(log_name):
 
     # Discover resource-activity distributions based on undifferentiated profile and 24/7 calendar
     resource_profiles = discover_differentiated_resource_profiles(event_log=log, log_ids=log_ids)
-    resource_calendars = discover_classic_resource_calendars_per_profile(
+    resource_calendars = discover_crisp_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DEFAULT_24_7),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DEFAULT_24_7),
         resource_profiles=resource_profiles,
     )
-    activity_resource_distributions = discover_activity_resource_distribution(
+    activity_resource_distributions = discover_crisp_activity_resource_distributions(
         event_log=log, log_ids=log_ids, resource_profiles=resource_profiles, resource_calendars=resource_calendars
     )
     # Assert
@@ -102,13 +106,13 @@ def test_discover_resource_activity_performances_pools(log_name):
 
     # Discover resource-activity distributions based on undifferentiated profile and 24/7 calendar
     resource_profiles = discover_pool_resource_profiles(event_log=log, log_ids=log_ids)
-    resource_calendars = discover_classic_resource_calendars_per_profile(
+    resource_calendars = discover_crisp_resource_calendars_per_profile(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DEFAULT_24_7),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DEFAULT_24_7),
         resource_profiles=resource_profiles,
     )
-    activity_resource_distributions = discover_activity_resource_distribution(
+    activity_resource_distributions = discover_crisp_activity_resource_distributions(
         event_log=log, log_ids=log_ids, resource_profiles=resource_profiles, resource_calendars=resource_calendars
     )
     # Assert

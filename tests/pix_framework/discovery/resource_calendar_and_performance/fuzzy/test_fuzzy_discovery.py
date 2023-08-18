@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from pix_framework.discovery.fuzzy_calendars.discovery import (
-    discovery_fuzzy_simulation_parameters,
+from pix_framework.discovery.resource_calendar_and_performance.fuzzy.discovery import (
+    discovery_fuzzy_resource_calendars_and_performances,
 )
 from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
 from pix_framework.discovery.start_time_estimator.config import ConcurrencyThresholds
@@ -42,7 +42,7 @@ def test_fuzzy_calendar_discovery_from_df(test_data):
     log = log[log[PROSIMOS_LOG_IDS.resource] != "Applicant-000001"]
 
     # discover fuzzy calendars
-    result, _ = discovery_fuzzy_simulation_parameters(
+    result, _ = discovery_fuzzy_resource_calendars_and_performances(
         log=log,
         log_ids=PROSIMOS_LOG_IDS,
     )

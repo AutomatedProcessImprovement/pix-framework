@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.resource_activity_performances import ActivityResourceDistribution
-from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType
+from pix_framework.calendar.crisp_resource_calendar import RCalendar
+from pix_framework.discovery.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
+from pix_framework.discovery.resource_activity_performance import ActivityResourceDistribution
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
 from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
@@ -25,7 +25,7 @@ def test_discover_case_arrival_model_undifferentiated(log_name):
 
     # Discover resource model with undifferentiated resources
     result = discover_resource_model(
-        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(discovery_type=CalendarType.UNDIFFERENTIATED)
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParameters(discovery_type=CalendarType.UNDIFFERENTIATED)
     )
     # Assert
     assert type(result) is ResourceModel
@@ -59,7 +59,7 @@ def test_discover_case_arrival_model_24_7(log_name):
 
     # Discover resource model with 24/7 resources
     result = discover_resource_model(
-        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(discovery_type=CalendarType.DEFAULT_24_7)
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParameters(discovery_type=CalendarType.DEFAULT_24_7)
     )
     # Assert
     assert type(result) is ResourceModel
@@ -93,7 +93,7 @@ def test_discover_case_arrival_model_9_5(log_name):
 
     # Discover resource model with 9/5 resources
     result = discover_resource_model(
-        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParams(discovery_type=CalendarType.DEFAULT_9_5)
+        event_log=log, log_ids=log_ids, params=CalendarDiscoveryParameters(discovery_type=CalendarType.DEFAULT_9_5)
     )
     # Assert
     assert type(result) is ResourceModel
@@ -129,7 +129,7 @@ def test_discover_case_arrival_model_differentiated(log_name):
     result = discover_resource_model(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE),
     )
     # Assert
     assert type(result) is ResourceModel
@@ -163,7 +163,7 @@ def test_discover_case_arrival_model_pool(log_name):
     result = discover_resource_model(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_POOL),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_POOL),
     )
     # Assert
     assert type(result) is ResourceModel
@@ -190,7 +190,7 @@ def test_resource_profiles_complete():
     log = read_csv_log(log_path, DEFAULT_XES_IDS)
 
     model = discover_resource_model(
-        log, DEFAULT_XES_IDS, CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE)
+        log, DEFAULT_XES_IDS, CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE)
     )
 
     # Ensure "9264148" in activity_resource_distributions
@@ -216,7 +216,7 @@ def test_discover_fuzzy_resource_model(log_name):
     result = discover_resource_model(
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY),
     )
 
     assert len(result.resource_profiles) == 3

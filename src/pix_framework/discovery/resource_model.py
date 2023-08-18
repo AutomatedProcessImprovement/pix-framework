@@ -3,19 +3,23 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
-from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.fuzzy_calendars.discovery import (
-    FuzzyResourceCalendar,
-    discovery_fuzzy_simulation_parameters,
-)
-from pix_framework.discovery.resource_activity_performances import (
-    ActivityResourceDistribution,
-    discover_activity_resource_distribution,
-)
-from pix_framework.discovery.resource_calendars import (
-    CalendarDiscoveryParams,
+from pix_framework.calendar.crisp_resource_calendar import RCalendar
+from pix_framework.calendar.fuzzy_resource_calendar import FuzzyResourceCalendar
+from pix_framework.discovery.calendar_discovery_parameters import (
+    CalendarDiscoveryParameters,
     CalendarType,
-    discover_classic_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_calendar_and_performance.fuzzy.discovery import (
+    discovery_fuzzy_resource_calendars_and_performances,
+)
+from pix_framework.discovery.resource_activity_performance import (
+    ActivityResourceDistribution,
+)
+from pix_framework.discovery.resource_calendar_and_performance.crisp.discovery import (
+    discover_crisp_resource_calendars_per_profile,
+)
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_activity_performance import (
+    discover_crisp_activity_resource_distributions,
 )
 from pix_framework.discovery.resource_profiles import (
     ResourceProfile,
@@ -64,7 +68,7 @@ class ResourceModel:
 def discover_resource_model(
     event_log: pd.DataFrame,
     log_ids: EventLogIDs,
-    params: CalendarDiscoveryParams,
+    params: CalendarDiscoveryParameters,
     provided_profiles: Optional[List[ResourceProfile]] = None,
 ) -> ResourceModel:
     """
@@ -94,15 +98,15 @@ def discover_resource_model(
     if params.discovery_type == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
         # Fuzzy resource calendars and activity-resource distribution discovery
         default_granularity = 15
-        resource_calendars, activity_resource_distributions = discovery_fuzzy_simulation_parameters(
+        resource_calendars, activity_resource_distributions = discovery_fuzzy_resource_calendars_and_performances(
             log=event_log, log_ids=log_ids, granularity=params.granularity or default_granularity
         )
     else:
-        # CRISP or Classic resource calendars and activity-resource distribution discovery
-        resource_calendars = discover_classic_resource_calendars_per_profile(
+        # Crisp resource calendars and activity-resource distribution discovery
+        resource_calendars = discover_crisp_resource_calendars_per_profile(
             event_log, log_ids, params, resource_profiles
         )
-        activity_resource_distributions = discover_activity_resource_distribution(
+        activity_resource_distributions = discover_crisp_activity_resource_distributions(
             event_log, log_ids, resource_profiles, resource_calendars
         )
     assert len(resource_calendars) > 0, "No resource calendars found"
