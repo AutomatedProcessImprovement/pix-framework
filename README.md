@@ -25,6 +25,10 @@ The `pix_framework.discovery` package besides root modules contains the followin
 - [prioritization_discovery](src/pix_framework/discovery/prioritization/)
 - [case_attribute_discovery](src/pix_framework/discovery/case_attribute/)
 
+The `pix_framework.enhancement` package besides root modules contains the following subpackages with additional information located in their README files:
+
+- [start_time_estimator](src/pix_framework/enhancement/start_time_estimator/)
+
 ## Development
 
 ### Testing

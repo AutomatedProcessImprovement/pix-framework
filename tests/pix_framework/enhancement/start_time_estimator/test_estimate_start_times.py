@@ -2,17 +2,17 @@ from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.start_time_estimator.config import (
+from pix_framework.enhancement.start_time_estimator.config import (
     ConcurrencyOracleType,
     Configuration,
     OutlierStatistic,
     ReEstimationMethod,
     ResourceAvailabilityType,
 )
-from pix_framework.discovery.start_time_estimator.estimator import StartTimeEstimator
+from pix_framework.enhancement.start_time_estimator.estimator import StartTimeEstimator
 from pix_framework.io.event_log import read_csv_log
 
-assets_dir = Path(__file__).parent / "assets"
+assets_dir = Path(__file__).parent.parent / "assets"
 
 
 def test_estimate_start_times_only_resource():

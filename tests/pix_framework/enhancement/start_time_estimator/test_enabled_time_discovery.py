@@ -3,16 +3,16 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
-from pix_framework.discovery.start_time_estimator.config import (
+from pix_framework.enhancement.concurrency_oracle import OverlappingConcurrencyOracle
+from pix_framework.enhancement.start_time_estimator.config import (
     ConcurrencyThresholds,
 )
-from pix_framework.discovery.start_time_estimator.config import (
+from pix_framework.enhancement.start_time_estimator.config import (
     Configuration as StartTimeEstimatorConfiguration,
 )
 from pix_framework.io.event_log import EventLogIDs, DEFAULT_CSV_IDS, read_csv_log
 
-assets_dir = Path(__file__).parent / "assets"
+assets_dir = Path(__file__).parent.parent / "assets"
 
 
 def _add_enabled_times(log: pd.DataFrame, log_ids: EventLogIDs):
