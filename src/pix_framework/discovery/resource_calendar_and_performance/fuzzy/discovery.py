@@ -5,7 +5,9 @@ import pandas as pd
 
 from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import int_week_days
 from pix_framework.discovery.resource_calendar_and_performance.fuzzy.resource_calendar import FuzzyResourceCalendar
-from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import ActivityResourceDistribution
+from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import (
+    ActivityResourceDistribution,
+)
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import DurationDistribution
 
@@ -25,7 +27,7 @@ def discovery_fuzzy_resource_calendars_and_performances(
     log: pd.DataFrame,
     log_ids: EventLogIDs,
     granularity=15,
-    angle=0.0,
+    angle=1.0,
 ) -> tuple[list[FuzzyResourceCalendar], list[ActivityResourceDistribution]]:
     """
     Discovers fuzzy simulation parameters from an event log.
