@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.prioritization_discovery.rules import (
+from pix_framework.discovery.prioritization.rules import (
     _reverse_one_hot_encoding,
     discover_prioritization_rules,
 )

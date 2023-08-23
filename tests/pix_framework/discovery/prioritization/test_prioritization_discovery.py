@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.prioritization_discovery.discovery import (
+from pix_framework.discovery.prioritization.discovery import (
     _discover_prioritized_instances,
     _split_to_individual_observations,
     discover_priority_rules,
