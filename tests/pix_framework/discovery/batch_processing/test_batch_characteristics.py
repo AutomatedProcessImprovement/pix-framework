@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.batch_processing_discovery.batch_characteristics import (
+from pix_framework.discovery.batch_processing.batch_characteristics import (
     _get_duration_distribution,
     _get_size_distribution,
     discover_batch_characteristics,
