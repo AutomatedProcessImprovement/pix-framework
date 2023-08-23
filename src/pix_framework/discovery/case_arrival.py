@@ -4,8 +4,8 @@ from typing import List
 
 import pandas as pd
 
-from pix_framework.calendar.resource_calendar import RCalendar
-from pix_framework.discovery.calendar_factory import CalendarFactory
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.crisp.factory import CalendarFactory
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import get_best_fitting_distribution, get_observations_histogram
 
@@ -21,7 +21,7 @@ class CaseArrivalModel:
 
     def to_dict(self) -> dict:
         return {
-            "arrival_time_calendar": self.case_arrival_calendar.to_json(),
+            "arrival_time_calendar": self.case_arrival_calendar.intervals_to_json(),
             "arrival_time_distribution": self.inter_arrival_times,
         }
 

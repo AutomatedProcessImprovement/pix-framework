@@ -130,5 +130,6 @@ dmypy.json
 
 # Custom
 .idea
+.vscode
 poetry.lock
 .DS_Store
