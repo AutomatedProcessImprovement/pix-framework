@@ -2,7 +2,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import int_week_days, str_week_days
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import (
+    int_week_days,
+    str_week_days,
+)
 
 
 class FuzzyInterval:
@@ -75,8 +78,8 @@ class FuzzyResourceCalendar:
         return {
             "id": self.resource_id,
             "name": self.resource_id,
-            "time_periods": self.intervals,
-            "workload_ratio": self.workloads,
+            "time_periods": [interval.to_prosimos() for interval in self.intervals],
+            "workload_ratio": [interval.to_prosimos() for interval in self.workloads],
         }
 
     @staticmethod
