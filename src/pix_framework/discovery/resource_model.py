@@ -99,7 +99,7 @@ def discover_resource_model(
         # Fuzzy resource calendars and activity-resource distribution discovery
         default_granularity = 15
         resource_calendars, activity_resource_distributions = discovery_fuzzy_resource_calendars_and_performances(
-            log=event_log, log_ids=log_ids, granularity=params.granularity or default_granularity
+            log=event_log, log_ids=log_ids, granularity=params.granularity or default_granularity, angle=params.angle
         )
     else:
         # Crisp resource calendars and activity-resource distribution discovery
