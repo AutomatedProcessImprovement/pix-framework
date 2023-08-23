@@ -1,10 +1,9 @@
 from pathlib import Path
 
 import pytest
-from pix_framework.discovery.resource_calendars import CalendarDiscoveryParams, CalendarType
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
-from pix_framework.io.event_log import read_csv_log
-from pix_framework.io.event_log import PROSIMOS_LOG_IDS
+from pix_framework.io.event_log import PROSIMOS_LOG_IDS, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"
 
@@ -24,7 +23,7 @@ def test_discover_case_arrival_model_differentiated_benchmark(benchmark, log_nam
         discover_resource_model,
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_RESOURCE),
     )
 
     # Assert
@@ -46,7 +45,7 @@ def test_discover_case_arrival_model_pool_benchmark(benchmark, log_name):
         discover_resource_model,
         event_log=log,
         log_ids=log_ids,
-        params=CalendarDiscoveryParams(discovery_type=CalendarType.DIFFERENTIATED_BY_POOL),
+        params=CalendarDiscoveryParameters(discovery_type=CalendarType.DIFFERENTIATED_BY_POOL),
     )
 
     # Assert
