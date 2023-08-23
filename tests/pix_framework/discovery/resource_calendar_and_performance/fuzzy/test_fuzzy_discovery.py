@@ -5,7 +5,7 @@ import pytest
 from pix_framework.discovery.resource_calendar_and_performance.fuzzy.discovery import (
     discovery_fuzzy_resource_calendars_and_performances,
 )
-from pix_framework.enhancement.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
+from pix_framework.enhancement.concurrency_oracle import OverlappingConcurrencyOracle
 from pix_framework.enhancement.start_time_estimator.config import ConcurrencyThresholds
 from pix_framework.enhancement.start_time_estimator.config import Configuration as StartTimeEstimatorConfiguration
 from pix_framework.io.event_log import PROSIMOS_LOG_IDS, EventLogIDs, read_csv_log
