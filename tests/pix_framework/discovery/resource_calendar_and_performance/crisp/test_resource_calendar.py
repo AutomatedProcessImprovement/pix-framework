@@ -1,12 +1,10 @@
-from pathlib import Path
-
 import pandas as pd
 import pytz
 from pix_framework.calendar.availability import (
     absolute_unavailability_intervals_within,
     get_last_available_timestamp,
 )
-from pix_framework.calendar.crisp_resource_calendar import Interval, RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import Interval, RCalendar
 
 _def_tz = pytz.timezone("UTC")
 

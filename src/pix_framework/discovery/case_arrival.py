@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from pix_framework.calendar.crisp_resource_calendar import RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import RCalendar
 from pix_framework.discovery.resource_calendar_and_performance.crisp.factory import CalendarFactory
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import get_best_fitting_distribution, get_observations_histogram

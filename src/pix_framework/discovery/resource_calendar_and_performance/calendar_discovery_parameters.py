@@ -4,6 +4,34 @@ from typing import Optional
 
 from pix_framework.discovery.resource_calendar_and_performance.fuzzy.proccess import Method
 
+str_week_days = {
+    "MONDAY": 0,
+    "TUESDAY": 1,
+    "WEDNESDAY": 2,
+    "THURSDAY": 3,
+    "FRIDAY": 4,
+    "SATURDAY": 5,
+    "SUNDAY": 6,
+}
+
+int_week_days = {
+    0: "MONDAY",
+    1: "TUESDAY",
+    2: "WEDNESDAY",
+    3: "THURSDAY",
+    4: "FRIDAY",
+    5: "SATURDAY",
+    6: "SUNDAY",
+}
+
+conversion_table = {
+    "WEEKS": 604800,
+    "DAYS": 86400,
+    "HOURS": 3600,
+    "MINUTES": 60,
+    "SECONDS": 1,
+}
+
 
 class CalendarType(str, Enum):
     DEFAULT_24_7 = "24/7"  # 24/7 work day

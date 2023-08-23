@@ -4,33 +4,8 @@ from datetime import timedelta
 
 import pandas as pd
 
-str_week_days = {
-    "MONDAY": 0,
-    "TUESDAY": 1,
-    "WEDNESDAY": 2,
-    "THURSDAY": 3,
-    "FRIDAY": 4,
-    "SATURDAY": 5,
-    "SUNDAY": 6,
-}
-
-int_week_days = {
-    0: "MONDAY",
-    1: "TUESDAY",
-    2: "WEDNESDAY",
-    3: "THURSDAY",
-    4: "FRIDAY",
-    5: "SATURDAY",
-    6: "SUNDAY",
-}
-
-conversion_table = {
-    "WEEKS": 604800,
-    "DAYS": 86400,
-    "HOURS": 3600,
-    "MINUTES": 60,
-    "SECONDS": 1,
-}
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import int_week_days, \
+    str_week_days, conversion_table
 
 
 class GranuleInfo:
@@ -204,8 +179,8 @@ class CalendarKPIInfoFactory:
         if self.res_enabled_task_granules is None:
             self.compute_resource_task_granule_enablement()
         return (
-            len(self.res_active_granules_weekdays[r_name][g_index][weekday])
-            / self.res_enabled_task_granules[r_name][g_index][weekday]
+                len(self.res_active_granules_weekdays[r_name][g_index][weekday])
+                / self.res_enabled_task_granules[r_name][g_index][weekday]
         )
 
     def task_cond_confidence(self, r_name, weekday, g_index):
@@ -309,9 +284,9 @@ class CalendarKPIInfoFactory:
 
     def compute_confidence_support(self, r_name):
         if (
-            r_name not in self.active_weekdays_in_calendar
-            or len(self.active_weekdays_in_calendar[r_name]) == 0
-            or self.res_count_events_in_log[r_name] == 0
+                r_name not in self.active_weekdays_in_calendar
+                or len(self.active_weekdays_in_calendar[r_name]) == 0
+                or self.res_count_events_in_log[r_name] == 0
         ):
             return 0, 0
         return (

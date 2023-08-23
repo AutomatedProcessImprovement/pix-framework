@@ -3,16 +3,16 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
-from pix_framework.calendar.crisp_resource_calendar import RCalendar
-from pix_framework.calendar.fuzzy_resource_calendar import FuzzyResourceCalendar
-from pix_framework.discovery.calendar_discovery_parameters import (
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.fuzzy.resource_calendar import FuzzyResourceCalendar
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import (
     CalendarDiscoveryParameters,
     CalendarType,
 )
 from pix_framework.discovery.resource_calendar_and_performance.fuzzy.discovery import (
     discovery_fuzzy_resource_calendars_and_performances,
 )
-from pix_framework.discovery.resource_activity_performance import (
+from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import (
     ActivityResourceDistribution,
 )
 from pix_framework.discovery.resource_calendar_and_performance.crisp.discovery import (

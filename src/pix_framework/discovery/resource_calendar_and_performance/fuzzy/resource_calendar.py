@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from pix_framework.calendar.crisp_resource_calendar import int_week_days, str_week_days
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import int_week_days, str_week_days
 
 
 class FuzzyInterval:
