@@ -4,7 +4,7 @@ import pandas as pd
 
 from pix_framework.calendar.availability import get_last_available_timestamp
 
-from .config import Configuration
+from pix_framework.enhancement.start_time_estimator.config import Configuration
 
 
 class ResourceAvailability:

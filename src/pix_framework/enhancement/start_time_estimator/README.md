@@ -25,14 +25,17 @@ Here we provide a simple example of use with the default configuration, followed
 of the technique.
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+from pix_framework.enhancement.start_time_estimator.estimator import StartTimeEstimator
+from pix_framework.io.event_log import read_csv_log
+
 # Set up default configuration
 configuration = Configuration()
 # Read event log
 event_log = read_csv_log(
     log_path="path/to/event/log.csv.gz",
-    config=configuration,
-    reset_start_times=True,  # Reset all start times to estimate them all
-    sort_by_end_time=True  # Sort log by end time (warning this might alter the order of the events sharing end time)
+    log_ids=configuration.log_ids,
+    sort=True  # Sort log by end time (warning this might alter the order of the events sharing end time)
 )
 # Estimate start times
 extended_event_log = StartTimeEstimator(event_log, configuration).estimate()
@@ -41,6 +44,9 @@ extended_event_log = StartTimeEstimator(event_log, configuration).estimate()
 The column IDs for the CSV file can be customized so the implementation works correctly with them:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+from pix_framework.io.event_log import EventLogIDs
+
 # Set up custom configuration
 configuration = Configuration(
     log_ids=EventLogIDs(
@@ -58,6 +64,9 @@ configuration = Configuration(
 With no outlier threshold and using the Median as the statistic to re-estimate the activity instances that couldn't be estimated:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod, ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.HEURISTICS,
@@ -69,6 +78,9 @@ configuration = Configuration(
 With no outlier threshold and using the Mode as the statistic to re-estimate the activity instances that couldn't be estimated:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod, ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.HEURISTICS,
@@ -80,10 +92,14 @@ configuration = Configuration(
 Customize the thresholds for the concurrency detection:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType, ConcurrencyThresholds
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.HEURISTICS,
-    heuristics_thresholds=HeuristicsThresholds(df=0.6, l2l=0.6),
+    concurrency_thresholds=ConcurrencyThresholds(df=0.6, l2l=0.6),
     re_estimation_method=ReEstimationMethod.MODE,
     resource_availability_type=ResourceAvailabilityType.SIMPLE
 )
@@ -92,6 +108,10 @@ configuration = Configuration(
 Add an outlier threshold of 200% and set the Mode to calculate the most typical duration too:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType, OutlierStatistic
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.HEURISTICS,
@@ -105,6 +125,10 @@ configuration = Configuration(
 Specify *bot resources* (perform the activities instantly) and *instant activities*:
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.HEURISTICS,
@@ -118,6 +142,10 @@ configuration = Configuration(
 #### Configuration with a simpler concurrency oracle (Alpha Miner's) for the Enablement Time calculation
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.ALPHA,
@@ -129,6 +157,10 @@ configuration = Configuration(
 #### Configuration with no concurrency oracle for the Enablement Time calculation (i.e. assuming directly-follows relations)
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.DF,
@@ -140,6 +172,10 @@ configuration = Configuration(
 #### Configuration only taking into account the Resource Availability Time
 
 ```python
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyOracleType, ReEstimationMethod
+from pix_framework.enhancement.start_time_estimator.config import ResourceAvailabilityType
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+
 # Set up custom configuration
 configuration = Configuration(
     concurrency_oracle_type=ConcurrencyOracleType.DEACTIVATED,
@@ -154,6 +190,10 @@ This package can be used too to calculate the enablement time (and the enabling 
 the need to calculate the resource availability and estimate the start times. A simple example can be found here:
 
 ```python
+from pix_framework.enhancement.concurrency_oracle import HeuristicsConcurrencyOracle
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log
+
 # Set up default configuration
 configuration = Configuration(
     log_ids=DEFAULT_CSV_IDS,  # Custom the column IDs with this parameter
@@ -162,8 +202,8 @@ configuration = Configuration(
 # Read event log
 event_log = read_csv_log(
     log_path="path/to/event/log.csv.gz",
-    config=configuration,
-    sort_by_end_time=True  # Sort log by end time (warning this might alter the order of the events sharing end time)
+    log_ids=configuration.log_ids,
+    sort=True  # Sort log by end time (warning this might alter the order of the events sharing end time)
 )
 # Instantiate desired concurrency oracle
 concurrency_oracle = HeuristicsConcurrencyOracle(event_log, configuration)

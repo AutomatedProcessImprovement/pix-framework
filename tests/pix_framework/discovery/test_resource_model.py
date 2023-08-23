@@ -7,9 +7,9 @@ from pix_framework.discovery.resource_calendar_and_performance.calendar_discover
 from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import ActivityResourceDistribution
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
-from pix_framework.discovery.start_time_estimator.concurrency_oracle import OverlappingConcurrencyOracle
-from pix_framework.discovery.start_time_estimator.config import ConcurrencyThresholds
-from pix_framework.discovery.start_time_estimator.config import Configuration as StartTimeEstimatorConfiguration
+from pix_framework.enhancement.concurrency_oracle import OverlappingConcurrencyOracle
+from pix_framework.enhancement.start_time_estimator.config import ConcurrencyThresholds
+from pix_framework.enhancement.start_time_estimator.config import Configuration as StartTimeEstimatorConfiguration
 from pix_framework.io.event_log import APROMORE_LOG_IDS, DEFAULT_XES_IDS, EventLogIDs, read_csv_log
 
 assets_dir = Path(__file__).parent.parent / "assets"

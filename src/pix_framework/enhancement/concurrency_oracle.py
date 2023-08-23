@@ -5,8 +5,8 @@ import pandas as pd
 import polars as pl
 
 from pix_framework.io.event_log import EventLogIDs
-from .config import Configuration
-from .utils import zip_with_next
+from pix_framework.enhancement.start_time_estimator.config import Configuration
+from pix_framework.enhancement.start_time_estimator.utils import zip_with_next
 
 
 class ConcurrencyOracle:

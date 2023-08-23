@@ -4,12 +4,16 @@ from statistics import mode
 import numpy as np
 import pandas as pd
 
-from .concurrency_oracle import (
+from pix_framework.enhancement.concurrency_oracle import (
     AlphaConcurrencyOracle,
     DeactivatedConcurrencyOracle,
     DirectlyFollowsConcurrencyOracle,
     HeuristicsConcurrencyOracle,
     OverlappingConcurrencyOracle,
+)
+from pix_framework.enhancement.resource_availability import (
+    CalendarResourceAvailability,
+    SimpleResourceAvailability,
 )
 from .config import (
     ConcurrencyOracleType,
@@ -17,10 +21,6 @@ from .config import (
     OutlierStatistic,
     ReEstimationMethod,
     ResourceAvailabilityType,
-)
-from .resource_availability import (
-    CalendarResourceAvailability,
-    SimpleResourceAvailability,
 )
 
 
