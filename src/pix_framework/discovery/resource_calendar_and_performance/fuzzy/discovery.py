@@ -83,8 +83,8 @@ def _join_fuzzy_calendar_intervals(fuzzy_calendars, i_size):
     for r_id in fuzzy_calendars:
         resource_calendars.append(
             {
-                "id": "%s_timetable" % r_id,
-                "name": "%s_timetable" % r_id,
+                "id": r_id,
+                "name": r_id,
                 "time_periods": _sweep_line_intervals(fuzzy_calendars[r_id].res_absolute_prob, i_size),
                 "workload_ratio": _sweep_line_intervals(fuzzy_calendars[r_id].res_relative_prob, i_size),
             }
