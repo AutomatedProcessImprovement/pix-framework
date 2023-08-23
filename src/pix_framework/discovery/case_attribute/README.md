@@ -8,8 +8,8 @@ if continuous).
 ```python
 import pandas as pd
 
-from case_attribute_discovery.config import DEFAULT_CSV_IDS
-from case_attribute_discovery.discovery import discover_case_attributes
+from pix_framework.discovery.case_attribute.discovery import discover_case_attributes
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 # Read event log
 event_log = pd.read_csv("path_to_event_log.csv")
