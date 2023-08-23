@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.discovery.batch_processing_discovery.discovery import (
+from pix_framework.discovery.batch_processing.discovery import (
     _classify_batch_types,
     _identify_single_activity_batches,
 )

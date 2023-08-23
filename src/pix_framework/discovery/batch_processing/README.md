@@ -31,8 +31,8 @@ for more parameters):
 ```python
 import pandas as pd
 
-from batch_processing_discovery.batch_characteristics import discover_batch_processing_and_characteristics
-from batch_processing_discovery.config import DEFAULT_CSV_IDS
+from pix_framework.discovery.batch_processing.batch_characteristics import discover_batch_processing_and_characteristics
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 # Read event log
 event_log = pd.read_csv("path/to/event/log.csv.gz")
@@ -52,8 +52,8 @@ for more parameters):
 ```python
 import pandas as pd
 
-from batch_processing_discovery.config import DEFAULT_CSV_IDS
-from batch_processing_discovery.discovery import discover_batches
+from pix_framework.discovery.batch_processing.discovery import discover_batches
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 # Read event log
 event_log = pd.read_csv("path/to/event/log.csv.gz")
@@ -74,8 +74,8 @@ for more parameters):
 ```python
 import pandas as pd
 
-from batch_processing_discovery.batch_characteristics import discover_batch_characteristics
-from batch_processing_discovery.config import DEFAULT_CSV_IDS
+from pix_framework.discovery.batch_processing.batch_characteristics import discover_batch_characteristics
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 # Read event log
 event_log = pd.read_csv("path/to/event/log_with_batch_info.csv.gz")
