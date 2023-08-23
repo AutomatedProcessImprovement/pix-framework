@@ -142,7 +142,7 @@ def discover_differentiated_resource_profiles(
                         name=resource_name,
                         amount=1,
                         cost_per_hour=cost_per_hour,
-                        calendar_id=f"{resource_name}_calendar",
+                        calendar_id=f"{resource_name}",
                         assigned_tasks=assigned_activities,
                     )
                 ],
