@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import pytest
-from pix_framework.calendar.crisp_resource_calendar import RCalendar
-from pix_framework.discovery.calendar_discovery_parameters import (
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import (
     CalendarDiscoveryParameters,
     CalendarType,
 )

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from pix_framework.calendar.crisp_resource_calendar import Interval, RCalendar
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import Interval, RCalendar
 from pix_framework.discovery.start_time_estimator.config import Configuration
 from pix_framework.discovery.start_time_estimator.resource_availability import (
     CalendarResourceAvailability,

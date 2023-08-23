@@ -3,9 +3,9 @@ from typing import Optional
 
 import pandas as pd
 
-from pix_framework.calendar.crisp_resource_calendar import int_week_days
-from pix_framework.calendar.fuzzy_resource_calendar import FuzzyResourceCalendar
-from pix_framework.discovery.resource_activity_performance import ActivityResourceDistribution
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import int_week_days
+from pix_framework.discovery.resource_calendar_and_performance.fuzzy.resource_calendar import FuzzyResourceCalendar
+from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import ActivityResourceDistribution
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import DurationDistribution
 

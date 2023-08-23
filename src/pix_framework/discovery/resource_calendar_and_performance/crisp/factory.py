@@ -3,7 +3,7 @@ from typing import Dict
 
 import pytz
 
-from pix_framework.calendar.crisp_resource_calendar import (
+from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import (
     RCalendar,
     int_week_days,
     GranuleInfo,

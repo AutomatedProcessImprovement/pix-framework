@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from pix_framework.discovery.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.io.event_log import PROSIMOS_LOG_IDS, read_csv_log
 
