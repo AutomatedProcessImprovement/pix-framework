@@ -9,8 +9,8 @@ with high priority are executed before than activity instances of cases with low
 ```python
 import pandas as pd
 
-from prioritization_discovery.config import DEFAULT_CSV_IDS
-from prioritization_discovery.discovery import discover_priority_rules
+from pix_framework.discovery.prioritization.discovery import discover_priority_rules
+from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 # Read event log
 event_log = pd.read_csv("path_to_event_log.csv")
