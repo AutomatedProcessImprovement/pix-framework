@@ -84,7 +84,7 @@ class DurationDistribution:
             # Generate missing elements
             local_sample = self._generate_raw_sample(size - len(sample))
             # Filter out negative and out of limits elements
-            local_sample = [element for element in local_sample if element > 0.0]
+            local_sample = [element for element in local_sample if element >= 0.0]
             if self.min is not None:
                 local_sample = [element for element in local_sample if element >= self.min]
             if self.max is not None:
@@ -94,10 +94,11 @@ class DurationDistribution:
             i += 1
         # Check if all elements got generated
         if len(sample) < size:
-            print("Warning! "
+            default_value = self._replace_out_of_bounds_value()
+            print(f"Warning when generating sample of distribution {self}. "
                   "Too many iterations generating durations out of the distribution limits! "
-                  "Setting default values!")
-            sample += [self._replace_out_of_bounds_value()] * (size - len(sample))
+                  f"Filling missing values with default ({default_value})!")
+            sample += [default_value] * (size - len(sample))
         # Return complete sample
         return sample
 
@@ -144,7 +145,7 @@ class DurationDistribution:
 
     def _replace_out_of_bounds_value(self):
         new_value = None
-        if self.mean is not None and self.mean > 0:
+        if self.mean is not None and self.mean >= 0.0:
             # Set to mean
             new_value = self.mean
         if self.min is not None and self.max is not None:
@@ -156,26 +157,6 @@ class DurationDistribution:
             new_value = 0.0
         # Return fixed value
         return new_value
-
-    def generate_one_value_with_boundaries(self) -> float:
-        """
-        Generate value following the duration distribution and
-        limit it by using min and max values
-        """
-        while True:
-            [val] = self.generate_sample(1)
-
-            # TODO: expon does not support boundaries at the moment
-            # should be fixed
-            if self.type in [DistributionType.FIXED, DistributionType.UNIFORM, DistributionType.EXPONENTIAL]:
-                # fixed and uniform distributions are not limited by min and max
-                # those limitations are already implied during value generation
-                break
-
-            if self.min <= val <= self.max:
-                break
-
-        return val
 
     def scale_distribution(self, alpha: float) -> "DurationDistribution":
         return DurationDistribution(
