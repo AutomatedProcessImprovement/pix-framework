@@ -45,7 +45,7 @@ def test_fuzzy_calendar_discovery_from_df(test_data):
     result, _ = discovery_fuzzy_resource_calendars_and_performances(
         log=log,
         log_ids=PROSIMOS_LOG_IDS,
-        angle=0.0,
+        fuzzy_angle=0.0,
     )
 
     # calculate error

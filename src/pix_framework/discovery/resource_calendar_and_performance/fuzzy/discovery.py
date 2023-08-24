@@ -27,7 +27,7 @@ def discovery_fuzzy_resource_calendars_and_performances(
     log: pd.DataFrame,
     log_ids: EventLogIDs,
     granularity=15,
-    angle=1.0,
+    fuzzy_angle=0.0,
 ) -> tuple[list[FuzzyResourceCalendar], list[ActivityResourceDistribution]]:
     """
     Discovers fuzzy simulation parameters from an event log.
@@ -35,7 +35,7 @@ def discovery_fuzzy_resource_calendars_and_performances(
     """
     activity_resources = _get_activities_resources(log, log_ids)
 
-    process = Process(granularity, activity_resources, log, log_ids, True, Method.TRAPEZOIDAL, angle=angle)
+    process = Process(granularity, activity_resources, log, log_ids, True, Method.TRAPEZOIDAL, angle=fuzzy_angle)
     fuzzy_factory = FuzzyFactory(process)
 
     # discovery
