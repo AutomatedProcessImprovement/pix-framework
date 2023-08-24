@@ -84,7 +84,7 @@ class CalendarDiscoveryParameters:
 
     # Parameters unique to fuzzy calendars (it uses granularity too)
     fuzzy_method: Optional[Method] = Method.TRAPEZOIDAL
-    angle: Optional[float] = 1.0
+    fuzzy_angle: Optional[float] = 1.0
 
     def to_dict(self) -> dict:
         calendar_discovery_params = {"discovery_type": self.discovery_type.value}
@@ -101,7 +101,7 @@ class CalendarDiscoveryParameters:
         elif self.discovery_type == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
             calendar_discovery_params["granularity"] = self.granularity
             calendar_discovery_params["fuzzy_method"] = self.fuzzy_method.value
-            calendar_discovery_params["angle"] = self.angle
+            calendar_discovery_params["fuzzy_angle"] = self.fuzzy_angle
 
         return calendar_discovery_params
 
@@ -112,7 +112,7 @@ class CalendarDiscoveryParameters:
         support = None
         participation = None
         fuzzy_method = None
-        angle = None
+        fuzzy_angle = None
 
         # If the discovery type implies a discovery, parse parameters
         if calendar_discovery_params["discovery_type"] in [
@@ -127,7 +127,7 @@ class CalendarDiscoveryParameters:
         elif calendar_discovery_params["discovery_type"] == CalendarType.DIFFERENTIATED_BY_RESOURCE_FUZZY:
             granularity = calendar_discovery_params["granularity"]
             fuzzy_method = Method.from_str(calendar_discovery_params["fuzzy_method"])
-            angle = calendar_discovery_params["angle"]
+            fuzzy_angle = calendar_discovery_params["angle"]
 
         return CalendarDiscoveryParameters(
             discovery_type=calendar_discovery_params["discovery_type"],
@@ -136,5 +136,5 @@ class CalendarDiscoveryParameters:
             support=support,
             participation=participation,
             fuzzy_method=fuzzy_method,
-            angle=angle,
+            fuzzy_angle=fuzzy_angle,
         )
