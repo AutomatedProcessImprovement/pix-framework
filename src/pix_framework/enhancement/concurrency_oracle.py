@@ -90,6 +90,10 @@ class ConcurrencyOracle:
         :param include_enabling_activity:   if True, add a column with the label of the activity enabling the current
                                             one.
         """
+        # Initialize needed columns to 'obj'
+        event_log[self.log_ids.enabled_time] = None
+        if include_enabling_activity:
+            event_log[self.log_ids.enabling_activity] = None
         # Initialize lists to write all enabled times in the log at once
         indexes, enabled_times, enabling_activities = [], [], []
         # Parallelize enabling information extraction by trace

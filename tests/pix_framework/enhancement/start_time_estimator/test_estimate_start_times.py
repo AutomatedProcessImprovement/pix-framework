@@ -50,7 +50,7 @@ def test_estimate_start_times_instant():
     )
     event_log = read_csv_log(assets_dir / "test_event_log_1.csv", config.log_ids, config.missing_resource)
     # Set one start timestamp manually
-    event_log[config.log_ids.start_time] = pd.NaT
+    event_log[config.log_ids.start_time] = None
     manually_added_timestamp = pd.Timestamp("2006-11-07 12:33:00+02:00")
     event_log.loc[
         (event_log[config.log_ids.case] == "trace-01") & (event_log[config.log_ids.activity] == "C"),
