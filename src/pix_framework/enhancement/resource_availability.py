@@ -54,6 +54,8 @@ class ResourceAvailability:
 
         :param event_log: event log to add the resource availability time information to.
         """
+        # Initialize column to 'obj'
+        event_log[self.log_ids.available_time] = None
         # For each trace in the log, estimate the enabled time of its events
         indexes = []
         resource_availability_times = []
