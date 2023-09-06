@@ -1,0 +1,62 @@
+[
+  {
+    "id": "User_113",
+    "name": "User_113",
+    "time_periods": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00"
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00"
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00"
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00"
+      }
+    ]
+  },
+  {
+    "id": "User_83",
+    "name": "User_83",
+    "time_periods": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00"
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00"
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00"
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00"
+      }
+    ]
+  }
+]
