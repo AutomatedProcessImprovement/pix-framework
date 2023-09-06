@@ -51,7 +51,19 @@ class ResourceModel:
 
     @staticmethod
     def from_dict(resource_model: dict) -> "ResourceModel":
-        calendars = [RCalendar.from_dict(calendar_dict) for calendar_dict in resource_model["resource_calendars"]]
+        if len(resource_model["resource_calendars"]) > 0:
+            if "workload_ratio" in resource_model["resource_calendars"][0]:
+                calendars = [
+                    FuzzyResourceCalendar.from_dict(calendar_dict)
+                    for calendar_dict in resource_model["resource_calendars"]
+                ]
+            else:
+                calendars = [
+                    RCalendar.from_dict(calendar_dict)
+                    for calendar_dict in resource_model["resource_calendars"]
+                ]
+        else:
+            calendars = []
 
         return ResourceModel(
             resource_profiles=[
