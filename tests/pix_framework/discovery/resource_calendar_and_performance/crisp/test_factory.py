@@ -12,8 +12,8 @@ def test_calendar_module():
     log_path = assets_dir / "PurchasingExample.csv"
 
     df = pd.read_csv(log_path)
-    df["start_timestamp"] = pd.to_datetime(df["start_timestamp"])
-    df["time:timestamp"] = pd.to_datetime(df["time:timestamp"])
+    df["start_timestamp"] = pd.to_datetime(df["start_timestamp"], utc=True)
+    df["time:timestamp"] = pd.to_datetime(df["time:timestamp"], utc=True)
     calendar_factory = CalendarFactory(15)
 
     for _, row in df.iterrows():
