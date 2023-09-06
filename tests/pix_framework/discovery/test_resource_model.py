@@ -1,10 +1,15 @@
+import json
 from pathlib import Path
 
 import pandas as pd
 import pytest
+
+from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import \
+    CalendarDiscoveryParameters, CalendarType
 from pix_framework.discovery.resource_calendar_and_performance.crisp.resource_calendar import RCalendar
-from pix_framework.discovery.resource_calendar_and_performance.calendar_discovery_parameters import CalendarDiscoveryParameters, CalendarType
-from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import ActivityResourceDistribution
+from pix_framework.discovery.resource_calendar_and_performance.fuzzy.resource_calendar import FuzzyResourceCalendar
+from pix_framework.discovery.resource_calendar_and_performance.resource_activity_performance import \
+    ActivityResourceDistribution
 from pix_framework.discovery.resource_model import ResourceModel, discover_resource_model
 from pix_framework.discovery.resource_profiles import ResourceProfile
 from pix_framework.enhancement.concurrency_oracle import OverlappingConcurrencyOracle
@@ -222,6 +227,26 @@ def test_discover_fuzzy_resource_model(log_name):
     assert len(result.resource_profiles) == 3
     # Check the discovery type flag works and discovers fuzzy calendars with probabilities field present
     assert result.resource_calendars[0].intervals[0].probability == 1.0
+
+
+@pytest.mark.parametrize("calendars_file", [
+    "resource_calendars_crisp_sample.json",
+    "resource_calendars_fuzzy_sample.json"
+])
+def test_from_dict(calendars_file):
+    calendars_path = assets_dir / calendars_file
+    # Read calendars
+    with open(calendars_path, "r") as f:
+        calendars = json.load(f)
+    # Read ResourceModel form dict
+    resource_model_dict = {"resource_profiles": [], "task_resource_distribution": [], "resource_calendars": calendars}
+    resource_model = ResourceModel.from_dict(resource_model_dict)
+    # Assert crisp calendar
+    assert len(resource_model.resource_calendars) > 0, "No calendars were read from the dictionary"
+    if "crisp" in calendars_file:
+        assert isinstance(resource_model.resource_calendars[0], RCalendar)
+    else:
+        assert isinstance(resource_model.resource_calendars[0], FuzzyResourceCalendar)
 
 
 def _add_enabled_times(log: pd.DataFrame, log_ids: EventLogIDs):
