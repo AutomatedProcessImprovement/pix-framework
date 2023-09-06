@@ -1,0 +1,130 @@
+[
+  {
+    "id": "User_113",
+    "name": "User_113",
+    "time_periods": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.75
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.80
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.9
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.87
+      }
+    ],
+    "workload_ratio": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.12
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.45
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.67
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.45
+      }
+    ]
+  },
+  {
+    "id": "User_83",
+    "name": "User_83",
+    "time_periods": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.75
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.80
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.9
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.87
+      }
+    ],
+    "workload_ratio": [
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.12
+      },
+      {
+        "from": "MONDAY",
+        "to": "MONDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.45
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "08:00:00",
+        "endTime": "12:00:00",
+        "probability": 0.67
+      },
+      {
+        "from": "WEDNESDAY",
+        "to": "WEDNESDAY",
+        "beginTime": "14:00:00",
+        "endTime": "18:00:00",
+        "probability": 0.45
+      }
+    ]
+  }
+]
