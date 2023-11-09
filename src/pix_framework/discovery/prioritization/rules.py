@@ -1,6 +1,7 @@
 import copy
 import re
 
+import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, _tree
 
@@ -37,7 +38,7 @@ def discover_prioritization_rules(data: pd.DataFrame, outcome: str) -> list:
             parsed_model = _reverse_one_hot_encoding(model, dummy_columns, filtered_data)
             models += [parsed_model]
             # Remove all observations covered by these rules (also negative ones)
-            predictions = _predict(model, filtered_data.drop([outcome], axis=1))
+            predictions = np.array(_predict(model, filtered_data.drop([outcome], axis=1)))
             true_positive_indexes = filtered_data[(filtered_data[outcome] == 1) & predictions].index
             filtered_data = filtered_data.loc[filtered_data.index.difference(true_positive_indexes)]
             # If no more prioritizations pending end search

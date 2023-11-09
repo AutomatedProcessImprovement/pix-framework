@@ -20,7 +20,10 @@ def discover_priority_rules(event_log: pd.DataFrame, attributes: list[str]) -> l
     outcome = "outcome"
     prioritized_instances = _discover_prioritized_instances(event_log, attributes, outcome)
     # Discover the priority levels and rules that classify a case in its level.
-    priority_rules = discover_prioritization_rules(prioritized_instances, outcome)
+    if len(prioritized_instances) > 0:
+        priority_rules = discover_prioritization_rules(prioritized_instances, outcome)
+    else:
+        priority_rules = []
     # Return rules
     return priority_rules
 
