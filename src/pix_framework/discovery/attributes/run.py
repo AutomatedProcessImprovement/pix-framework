@@ -21,7 +21,7 @@ EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/event_attributes_log.cs
 CASE_AND_EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_and_event_attributes_log.csv"
 GLOBAL_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/global_attributes_log.csv"
 EVENT_AND_GLOBAL_FILE_PATH = "tests/pix_framework/assets/event_and_global_attributes_log.csv"
-
+RANDOM_TEST_PATH = "tests/pix_framework/assets/test.csv"
 
 def fetch_and_print_attributes(file_name, method, sizes, log_ids):
     for size in sizes:
@@ -37,7 +37,7 @@ def fetch_and_print_attributes(file_name, method, sizes, log_ids):
         results = method(event_log, log_ids=log_ids)
 
         end_time = time.time()  # End time
-        print(f"{file_name.split('/')[-1]} with head size {size} execution time: {end_time - start_time:.2f} seconds\n\n\n\n")
+        print(f"\n{file_name.split('/')[-1]} with head size {size} execution time: {end_time - start_time:.2f} seconds\n\n\n\n")
 
 
 def discover_and_print_for_files(method, file_paths, sizes, log_ids):
@@ -48,11 +48,12 @@ def discover_and_print_for_files(method, file_paths, sizes, log_ids):
 if __name__ == "__main__":
     sizes_to_test = [0]
     files_to_discover = [
-        # CASE_ATTRIBUTES_FILE_PATH,
+        CASE_ATTRIBUTES_FILE_PATH,
         EVENT_ATTRIBUTES_FILE_PATH,
-        # CASE_AND_EVENT_ATTRIBUTES_FILE_PATH,
+        CASE_AND_EVENT_ATTRIBUTES_FILE_PATH,
         GLOBAL_ATTRIBUTES_FILE_PATH,
-        EVENT_AND_GLOBAL_FILE_PATH
+        EVENT_AND_GLOBAL_FILE_PATH,
+        RANDOM_TEST_PATH
     ]
 
 
