@@ -21,7 +21,8 @@ EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/event_attributes_log.cs
 CASE_AND_EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_and_event_attributes_log.csv"
 GLOBAL_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/global_attributes_log.csv"
 EVENT_AND_GLOBAL_FILE_PATH = "tests/pix_framework/assets/event_and_global_attributes_log.csv"
-RANDOM_TEST_PATH = "tests/pix_framework/assets/test.csv"
+MATH_TEST_PATH = "tests/pix_framework/assets/math_log.csv"
+DISCRETE_TEST_PATH = "tests/pix_framework/assets/discrete_log.csv"
 
 def fetch_and_print_attributes(file_name, method, sizes, log_ids):
     for size in sizes:
@@ -53,7 +54,8 @@ if __name__ == "__main__":
         CASE_AND_EVENT_ATTRIBUTES_FILE_PATH,
         GLOBAL_ATTRIBUTES_FILE_PATH,
         EVENT_AND_GLOBAL_FILE_PATH,
-        RANDOM_TEST_PATH
+        MATH_TEST_PATH,
+        DISCRETE_TEST_PATH
     ]
 
 
