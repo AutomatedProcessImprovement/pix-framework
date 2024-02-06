@@ -23,6 +23,7 @@ GLOBAL_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/global_attributes_log.
 EVENT_AND_GLOBAL_FILE_PATH = "tests/pix_framework/assets/event_and_global_attributes_log.csv"
 MATH_TEST_PATH = "tests/pix_framework/assets/math_log.csv"
 DISCRETE_TEST_PATH = "tests/pix_framework/assets/discrete_log.csv"
+EXPERIMENTS_TEST_PATH = "D:/_est/PIX_discovery/Experiments/experiment_log_main.csv"
 
 def fetch_and_print_attributes(file_name, method, sizes, log_ids):
     for size in sizes:
@@ -43,21 +44,22 @@ def fetch_and_print_attributes(file_name, method, sizes, log_ids):
 
 def discover_and_print_for_files(method, file_paths, sizes, log_ids):
     for file_name in file_paths:
+        print(f"\n\n\n\n\nDISCOVERING {file_name}")
         fetch_and_print_attributes(file_name, method, sizes, log_ids)
 
 
 if __name__ == "__main__":
     sizes_to_test = [0]
     files_to_discover = [
-        CASE_ATTRIBUTES_FILE_PATH,
-        EVENT_ATTRIBUTES_FILE_PATH,
-        CASE_AND_EVENT_ATTRIBUTES_FILE_PATH,
-        GLOBAL_ATTRIBUTES_FILE_PATH,
-        EVENT_AND_GLOBAL_FILE_PATH,
-        MATH_TEST_PATH,
-        DISCRETE_TEST_PATH
+        # CASE_ATTRIBUTES_FILE_PATH,
+        # EVENT_ATTRIBUTES_FILE_PATH,
+        # CASE_AND_EVENT_ATTRIBUTES_FILE_PATH,
+        # GLOBAL_ATTRIBUTES_FILE_PATH,
+        # EVENT_AND_GLOBAL_FILE_PATH,
+        # MATH_TEST_PATH,
+        # DISCRETE_TEST_PATH,
+        EXPERIMENTS_TEST_PATH
     ]
-
 
     discover_and_print_for_files(discover_attributes, files_to_discover, sizes_to_test, PROSIMOS_LOG_IDS)
 
