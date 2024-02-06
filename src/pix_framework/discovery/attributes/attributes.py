@@ -207,13 +207,12 @@ def discover_attributes(event_log: pd.DataFrame,
     case_attribute_names = [attribute['name'] for attribute in case_attributes]
     attributes_to_discover = subtract_lists(attributes_to_discover, case_attribute_names)
     print(f"Discovered case attributes: {case_attribute_names}")
-
-
     print(f"Attributes left to discover: {attributes_to_discover}")
 
     event_attributes = []
     model_results = {}
 
+    print("LINEAR MODEL ANALYSIS")
     model_results['Linear'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
@@ -221,6 +220,7 @@ def discover_attributes(event_log: pd.DataFrame,
         linear_regression_analysis
     )
 
+    print("CURVE MODEL ANALYSIS")
     model_results['Curve'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
@@ -228,6 +228,7 @@ def discover_attributes(event_log: pd.DataFrame,
         curve_fitting_analysis
     )
 
+    print("M5PY MODEL ANALYSIS")
     model_results['M5PY'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
