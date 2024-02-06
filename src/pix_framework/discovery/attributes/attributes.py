@@ -26,6 +26,8 @@ from niaarm.mine import get_text_rules
 from niaarm import Dataset, get_rules
 from niapy.algorithms.basic import DifferentialEvolution, ParticleSwarmOptimization
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error
+from scipy.stats import median_abs_deviation
 
 from m5py import M5Prime, export_text_m5
 
@@ -41,13 +43,12 @@ logger = logging.getLogger(__name__)
 DISCRETE_ERROR_RATIO = 0.95
 DEFAULT_SAMPLING_SIZE = 2500
 
-
-def sample_average_case_size(event_log: pd.DataFrame,
-                             log_ids: any,
-                             sampling_size: int) -> pd.DataFrame:
-    avg_activities_per_case = event_log.groupby(log_ids.case).size().mean()
-    rows_to_retrieve = int(avg_activities_per_case * sampling_size)
-    return event_log.iloc[:rows_to_retrieve]
+metrics_dict = {
+    'MSE': None,  # Mean Squared Error
+    'MAE': None,  # Mean Absolute Error
+    'MedAD': None,  # Median Absolute Deviation
+    'AIC': None,  # Akaike Information Criterion
+}
 
 
 def sample_event_log_by_case(event_log: pd.DataFrame,
@@ -124,6 +125,20 @@ def extract_features(log, log_ids, is_event_log=False):
     return features
 
 
+def scale_data(log, encoded_columns, threshold=1e+37):
+    log_scaled = log.copy()
+    max_float = np.finfo(np.float32).max
+    min_float = np.finfo(np.float32).tiny
+
+    for col in log.columns:
+        if col not in encoded_columns and log[col].dtype in ['float64', 'int64']:
+            log_scaled.loc[log_scaled[col] > threshold, col] = max_float
+            log_scaled.loc[log_scaled[col] < -threshold, col] = min_float
+
+            log_scaled[col] = log_scaled[col].fillna(method='ffill')
+    return log_scaled
+
+
 def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE):
     sorted_log = event_log.sort_values(by=log_ids.end_time)
 
@@ -158,6 +173,9 @@ def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE
     g_log = g_log.iloc[1:].reset_index(drop=True)
     e_log = e_log.iloc[1:].reset_index(drop=True)
 
+    g_log = scale_data(g_log, encoded_columns)
+    e_log = scale_data(e_log, encoded_columns)
+
     e_log_features = extract_features(e_log, log_ids, is_event_log=True)
     g_log_features = extract_features(g_log, log_ids, is_event_log=False)
 
@@ -176,47 +194,48 @@ def discover_attributes(event_log: pd.DataFrame,
         ]
     all_attribute_columns = subtract_lists(event_log.columns, avoid_columns)
 
-    e_log, e_log_features, g_log, g_log_features, encoder, encoded_columns = preprocess_event_log(event_log, log_ids)
+    e_log, e_log_features, g_log, g_log_features, encoder, encoded_columns = preprocess_event_log(event_log, log_ids, sampling_size)
 
     # GLOBAL FIXED ATTRIBUTES
     global_attributes = _handle_fixed_global_attributes(e_log, all_attribute_columns, confidence_threshold, encoder, encoded_columns)
     global_fixed_attribute_names = [attribute['name'] for attribute in global_attributes]
     attributes_to_discover = subtract_lists(all_attribute_columns, global_fixed_attribute_names)
+    print(f"Discovered global fixed attributes: {global_fixed_attribute_names}")
 
     # CASE ATTRIBUTES
     case_attributes = _handle_case_attributes(e_log, attributes_to_discover, log_ids, confidence_threshold, encoder, encoded_columns)
     case_attribute_names = [attribute['name'] for attribute in case_attributes]
     attributes_to_discover = subtract_lists(attributes_to_discover, case_attribute_names)
+    print(f"Discovered case attributes: {case_attribute_names}")
 
-    pprint.pprint(case_attributes)
-    print(case_attribute_names)
-    print(attributes_to_discover)
+
+    print(f"Attributes left to discover: {attributes_to_discover}")
 
     event_attributes = []
+    model_results = {}
 
-    print("=== LINEAR === LINEAR === LINEAR === LINEAR === LINEAR === ")
-    results, formulas = classify_and_generate_formula(
+    model_results['Linear'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
         attributes_to_discover, log_ids,
         linear_regression_analysis
     )
 
-    print("\n\n=== CURVE === CURVE === CURVE === CURVE === CURVE === ")
-    results, formulas = classify_and_generate_formula(
+    model_results['Curve'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
         attributes_to_discover, log_ids,
         curve_fitting_analysis
     )
 
-    print("\n\n=== M5PY === M5PY === M5PY === M5PY === M5PY === ")
-    results, formulas = classify_and_generate_formula(
+    model_results['M5PY'] = classify_and_generate_formula(
         e_log, g_log,
         e_log_features, g_log_features,
         attributes_to_discover, log_ids,
         m5prime_analysis
     )
+
+    print_results_table(model_results)
 
     # print("------------------------------------------------")
     # print("------------------ GLOBAL ------------------")
@@ -233,21 +252,36 @@ def discover_attributes(event_log: pd.DataFrame,
     #     "event_attributes": event_attributes
     # }
 
+
+def print_results_table(model_results):
+    metrics_keys = ['MSE', 'MAE', 'MedAD', 'AIC']
+    header = f"{'Model':<15} {'Attribute':<30} " + \
+             " ".join([f"{f'g_{metric}':<15}" for metric in metrics_keys]) + " " + \
+             " ".join([f"{f'e_{metric}':<15}" for metric in metrics_keys])
+    print(header)
+
+    for model_name, attrs_results in model_results.items():
+        for attr, attr_data in attrs_results.items():
+            total_scores = attr_data['total_scores']
+            global_values = " ".join([f"{total_scores['global'][metric]:<15.5}" for metric in metrics_keys])
+            event_values = " ".join([f"{total_scores['event'][metric]:<15.5}" for metric in metrics_keys])
+            row = f"{model_name:<15} {attr:<30} {global_values} {event_values}"
+            print(row)
+
+
 def classify_and_generate_formula(e_log, g_log, e_log_features, g_log_features, attributes_to_discover, log_ids, prediction_method):
     results = {}
-    formulas = {}
-    total_scores = {}
+    metrics_keys = ['MSE', 'MAE', 'MedAD', 'AIC']
 
     for attr in attributes_to_discover:
-        # print(f"Analyzing attribute: {attr}")
+        print(f"Analyzing attribute: {attr}")
 
-        e_log_features = e_log_features["prev_"+attr]
-        g_log_features = g_log_features["prev_"+attr]
-
-        results[attr] = {}
-        formulas[attr] = {}
-        total_scores[attr] = {"event": 0, "global": 0}
-
+        attr_results = {
+            'total_scores': {
+                'event': {key: 0 for key in metrics_keys},
+                'global': {key: 0 for key in metrics_keys}},
+            'activities': {}
+        }
         unique_activities = e_log[log_ids.activity].unique()
 
         for activity in unique_activities:
@@ -258,39 +292,45 @@ def classify_and_generate_formula(e_log, g_log, e_log_features, g_log_features, 
             g_log_activity = g_log[g_log[log_ids.activity] == activity]
 
             # Merge with features
-            X_event = e_log_features.loc[e_log_activity.index]
+            X_event = e_log_features.loc[e_log_activity.index][["prev_" + attr]]
             y_event = e_log_activity[attr]
-
-            X_global = g_log_features.loc[g_log_activity.index]
+            X_global = g_log_features.loc[g_log_activity.index][["prev_" + attr]]
             y_global = g_log_activity[attr]
 
-            # Train and evaluate models using the provided prediction method
-            event_score, event_formula_dict, event_intercept = prediction_method(X_event, y_event)
-            global_score, global_formula_dict, global_intercept = prediction_method(X_global, y_global)
+            event_metrics, event_formula = prediction_method(X_event, y_event)
+            global_metrics, global_formula = prediction_method(X_global, y_global)
 
-            # Accumulate scores
-            total_scores[attr]["event"] += event_score
-            total_scores[attr]["global"] += global_score
+            for key in metrics_keys:
+                attr_results['total_scores']['event'][key] += event_metrics[key]
+                attr_results['total_scores']['global'][key] += global_metrics[key]
 
-            results[attr][activity] = {"event_score": event_score, "global_score": global_score}
-            formulas[attr][activity] = {
-                "event": {"formula": event_formula_dict, "intercept": event_intercept},
-                "global": {"formula": global_formula_dict, "intercept": global_intercept}
+            attr_results['activities'][activity] = {
+                'event': {'metrics': event_metrics, 'formula': event_formula},
+                'global': {'metrics': global_metrics, 'formula': global_formula}
             }
 
-    # Compare and summarize results
-    for attr, scores in total_scores.items():
-        best_model = "event" if scores["event"] <= scores["global"] else "global"
-        print(f"\nAttribute {attr} predicted as {best_model.upper()}")
-        print(f"Scores: Global: {scores['global']}, Event: {scores['event']}")
+        results[attr] = attr_results
 
-    return results, formulas
+    return results
+
+
+
+def calculate_aic(y_true, y_pred, num_params):
+    n = len(y_true)
+    RSS = np.sum((y_true - y_pred) ** 2)
+    return n * np.log(RSS / n) + 2 * num_params
 
 
 def model_function(X, *params):
+    if X.ndim == 1:  # Reshape to handle 1 dim feature array
+        X = X.reshape(-1, 1)
+
     y = np.zeros_like(X[:, 0])
     for i, param in enumerate(params):
-        y += param * X[:, i] ** (len(params) - i - 1)
+        if i < X.shape[1]:  # Handle 1 dim feature array
+            y += param * X[:, i] ** (len(params) - i - 1)
+        else:
+            y += param * (len(params) - i - 1)
     return y
 
 
@@ -298,42 +338,44 @@ def curve_fitting_analysis(X, y):
     X_2d = X.values if hasattr(X, 'values') else np.array(X)
     y_1d = y.values.ravel() if hasattr(y, 'values') else np.array(y)
 
-    # Number of parameters in the model (change according to your model function)
-    num_params = 3  # Example for a quadratic model
+    num_params = 3
+    params, _ = curve_fit(model_function, X_2d, y_1d, p0=np.ones(num_params), maxfev=5000)
 
-    # Curve fitting
-    params, params_covariance = curve_fit(model_function, X_2d, y_1d, p0=np.ones(num_params), maxfev=5000)
-
-    # Calculate score (you might want to replace this with a more appropriate metric)
     y_pred = model_function(X_2d, *params)
-    score = np.mean((y_1d - y_pred) ** 2)
+    metrics = {
+        'MSE': np.mean((y_1d - y_pred) ** 2),
+        'MAE': mean_absolute_error(y_1d, y_pred),
+        'MedAD': median_abs_deviation(y_1d - y_pred),
+        'AIC': calculate_aic(y_1d, y_pred, num_params)
+    }
 
     formula_dict = {f"x^{num_params-i}": param for i, param in enumerate(params, 1)}
-    intercept = params[-1]
-
-    # print(formula_dict)
-
-    return score, formula_dict, intercept
+    return metrics, formula_dict
 
 
 def linear_regression_analysis(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     model = LinearRegression()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
     model.fit(X_train, y_train)
+
     y_pred = model.predict(X_test)
-    score = mean_squared_error(y_test, y_pred)
+
+    metrics = {
+        'MSE': mean_squared_error(y_test, y_pred),
+        'MAE': mean_absolute_error(y_test, y_pred),
+        'MedAD': median_abs_deviation(y_test - y_pred),
+        'AIC': calculate_aic(y_test, y_pred, len(model.coef_) + 1)
+    }
 
     formula = ' + '.join([f'{coef:.3f}*{col}' for coef, col in zip(model.coef_, X.columns)]) + f' + {model.intercept_:.3f}'
-    # print(f"---> {formula}")
+    # print(formula)
 
-    formula_dict = {col: coef for col, coef in zip(X.columns, model.coef_)}
-    intercept = model.intercept_
-
-    return score, formula_dict, intercept
+    return metrics, formula
 
 
 def m5prime_analysis(X, y):
-    model = M5Prime(use_smoothing=True, use_pruning=False)
+    model = M5Prime(use_smoothing=True, use_pruning=True)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -341,16 +383,18 @@ def m5prime_analysis(X, y):
     y_train = y_train.reset_index(drop=True)
 
     model.fit(X_train, y_train)
-
     y_pred = model.predict(X_test)
 
-    error = mean_squared_error(y_test, y_pred)
+    metrics = {
+        'MSE': mean_squared_error(y_test, y_pred),
+        'MAE': mean_absolute_error(y_test, y_pred),
+        'MedAD': median_abs_deviation(y_test - y_pred),
+        'AIC': calculate_aic(y_test, y_pred, len(model.get_params()))
+    }
 
     formula = model.as_pretty_text()
     # print(formula)
-
-    # Return error and formula
-    return error, formula, 0
+    return metrics, formula
 
 
 def _handle_fixed_global_attributes(event_log_sorted, columns, confidence_threshold, encoder, encoded_columns):
