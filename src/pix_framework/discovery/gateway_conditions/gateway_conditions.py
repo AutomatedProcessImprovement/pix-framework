@@ -1,61 +1,30 @@
-import m5py.main
-from pandas import DataFrame
-from pix_framework.statistics.distribution import get_best_fitting_distribution
-
 import pandas as pd
 import numpy as np
-import json
 from pandas.api.types import is_numeric_dtype
 from pix_framework.io.event_log import EventLogIDs
 import time
-import functools
 import pprint
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
-from scipy import stats
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import BaseDecisionTree, _tree
+from sklearn.tree import _tree
 from sklearn.preprocessing import LabelEncoder
-from scipy.optimize import curve_fit
-from sklearn.metrics import r2_score
-from niaarm.text import Corpus
-from niaarm.mine import get_text_rules
-from niaarm import Dataset, get_rules
-from niapy.algorithms.basic import DifferentialEvolution, ParticleSwarmOptimization
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error
-from scipy.stats import median_abs_deviation
-import xml.etree.ElementTree as ET
-from sklearn import tree
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from imodels import RuleFitClassifier
-from imodels import RuleFitRegressor
-from sklearn.multioutput import MultiOutputClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, export_text
-from sklearn.metrics import accuracy_score, hamming_loss, f1_score
-from sklearn.model_selection import GridSearchCV
+
 from bpmn_parser import parse_simulation_model
-from replayer import parse_csv, Trace, parse_dataframe
+from replayer import Trace, parse_dataframe
 from replayer import BPMNGraph
 import pytz
 import sys
 from datetime import datetime
-from sklearn.preprocessing import MultiLabelBinarizer
 
-
-
-from m5py import M5Prime, export_text_m5
+import optuna
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 import logging
 
 import warnings
 
 warnings.filterwarnings("ignore")
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,9 +32,20 @@ logger = logging.getLogger(__name__)
 namespaces = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
 
 DISCRETE_ERROR_RATIO = 0.95
-DEFAULT_SAMPLING_SIZE = 1000
+DEFAULT_SAMPLING_SIZE = 5000
 
 
+def log_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"{func.__name__} executed in {end_time - start_time:.2f} seconds")
+        return result
+    return wrapper
+
+
+@log_time
 def discover_gateway_conditions(bpmn_model_path,
                                 event_log_path,
                                 log_ids: EventLogIDs,
@@ -74,95 +54,122 @@ def discover_gateway_conditions(bpmn_model_path,
         log_ids.case, log_ids.activity, log_ids.start_time,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
     ]
-    bpmn_graph = parse_simulation_model(bpmn_model_path)
 
-    bpmn_model_tree = ET.parse(bpmn_model_path)
-    bpmn_model = bpmn_model_tree.getroot()
+    bpmn_graph = parse_simulation_model(bpmn_model_path)
+    branching_probabilities = discover_joins(bpmn_graph)
 
     event_log = pd.read_csv(event_log_path)
     log_by_case = preprocess_event_log(event_log, log_ids, sampling_size)
 
-    activity_id_map = map_activity_names_to_ids(bpmn_model, namespaces) # Will be used in the future
-
-    print("Parsing log traces")
-    start_time = time.time()
     log_traces = parse_dataframe(log_by_case, log_ids, avoid_columns)
-    end_time = time.time()
-    print(f"Completed parsing in {end_time - start_time} seconds.")
 
     flow_arcs_frequency = dict()
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
 
-    branching_probabilities = discover_joins(gateway_states)
-
     dataframes = gateways_to_dataframes(gateway_states)
-
-    print("=======================================================")
-    print("=======================================================")
-    print("=======================================================")
-    print("=======================================================")
-    print("=======================================================")
-    print("=======================================================")
-
     dataframes, gateway_encoders = encode_dataframes(dataframes)
 
-    for gateway_id, df in dataframes.items():
-        print(f"DataFrame for {gateway_id}:")
-        print(df, "\n")
+    true_or_flows = discover_true_or_flows(gateway_states, dataframes)
 
     gateway_rules = discover_gateway_models(dataframes)
-    display_gateway_rules(gateway_rules)
-
     filtered_gateway_rules = filter_true_outcomes(gateway_rules)
-    display_gateway_rules(filtered_gateway_rules)
-
     simplified_gateway_rules = simplify_rules(filtered_gateway_rules)
-    display_gateway_rules(simplified_gateway_rules)
 
+    adjusted_and_decoded_rules = adjust_and_decode_conditions(simplified_gateway_rules, gateway_encoders)
+    adjusted_and_decoded_rules = simplify_rules(adjusted_and_decoded_rules)
+    display_gateway_rules(adjusted_and_decoded_rules)
 
-    pprint.pprint(branching_probabilities)
+    branch_rules = extract_branch_rules(adjusted_and_decoded_rules)
+    branch_rules.extend(true_or_flows)
 
-    branch_rules = convert_to_branch_rules(simplified_gateway_rules)
+    branching_probabilities_with_rules = calculate_gateway_branching_probabilities(adjusted_and_decoded_rules, flow_arcs_frequency, branch_rules)
+    branching_probabilities.extend(branching_probabilities_with_rules)
 
-    pprint.pprint(branch_rules)
-    print(flow_arcs_frequency)
+    result = {"gateway_branching_probabilities": branching_probabilities, "branch_rules": branch_rules}
 
-    n = calculate_gateway_branching_probabilities(simplified_gateway_rules, flow_arcs_frequency)
-    pprint.pprint(n)
-    pprint.pprint(branching_probabilities)
-
-    branching_probabilities.extend(n)
-    pprint.pprint(branching_probabilities)
-
-    result = {"branching_probabilities": branching_probabilities, "branch_rules": branch_rules}
-    pprint.pprint(result)
     return result
 
 
-def calculate_gateway_branching_probabilities(simplified_gateway_rules, flow_arcs_frequency):
-    gateway_branching_probabilities = []
+def discover_true_or_flows(gateway_states, dataframes):
+    branch_rules = []
 
+    for gateway_id, gateway_info in gateway_states.items():
+        if gateway_info['type'] == 'OR':
+            df = dataframes[gateway_id]
+
+            always_true_columns = [col for col in df.columns if col.startswith('Flow_') and df[col].all()]
+            non_flow_columns = [col for col in df.columns if not col.startswith('Flow_')]
+
+            for col in always_true_columns:
+                if non_flow_columns:
+                    synthetic_rule = {
+                        "id": col,
+                        "rules": [[{
+                            "attribute": non_flow_columns[0],
+                            "comparison": "!=",
+                            "value": "WARNING_THIS_CONDITION_ALWAYS_EVALUATES_TO_TRUE"
+                        }]]
+                    }
+                    branch_rules.append(synthetic_rule)
+    return branch_rules
+
+
+@log_time
+def adjust_and_decode_conditions(conditions, encoders):
+    adjusted_conditions = []
+    for condition in conditions:
+        attribute, operator, raw_value = condition
+        if attribute in encoders:
+            encoder = encoders[attribute]
+            value = float(raw_value)
+            if operator == '>':
+                decoded_value = encoder.inverse_transform([int(value + 1)])[0]
+            else:
+                decoded_value = encoder.inverse_transform([int(value)])[0]
+            adjusted_conditions.append((attribute, '=', decoded_value))
+        else:
+            adjusted_conditions.append((attribute, operator, raw_value))
+    return adjusted_conditions
+
+
+def adjust_and_decode_conditions(gateway_rules, gateway_encoders):
+    adjusted_rules = {}
+    for gateway_id, flows in gateway_rules.items():
+        encoders = gateway_encoders.get(gateway_id, {})
+        adjusted_rules[gateway_id] = {}
+        for flow_id, conditions_outcomes_list in flows.items():
+            adjusted_conditions_outcome = []
+            for conditions_outcome_pair in conditions_outcomes_list:
+                conditions, outcome = conditions_outcome_pair
+                adjusted_conditions = adjust_and_decode_conditions(conditions, encoders)
+                adjusted_conditions_outcome.append((adjusted_conditions, outcome))
+            adjusted_rules[gateway_id][flow_id] = adjusted_conditions_outcome
+    return adjusted_rules
+
+
+@log_time
+def calculate_gateway_branching_probabilities(simplified_gateway_rules, flow_arcs_frequency, branch_rules):
+    gateway_branching_probabilities = []
+    branch_rules_lookup = {rule['id']: rule for rule in branch_rules}
     for gateway_id, flows in simplified_gateway_rules.items():
         probabilities = []
-        total_executions = sum(flow_arcs_frequency[flow_id] for flow_id in flows.keys())
-        rounding_error = 0.0
+        total_executions = sum(flow_arcs_frequency.get(flow_id, 0) for flow_id in flows.keys())
 
         flow_ids = list(flows.keys())
         for i, flow_id in enumerate(flow_ids):
-            execution_count = flow_arcs_frequency[flow_id]
-            probability = execution_count / total_executions
+            execution_count = flow_arcs_frequency.get(flow_id, 0)
+            probability = execution_count / total_executions if total_executions > 0 else 0
 
-            if i < len(flow_ids) - 1:
-                adjusted_probability = round(probability + rounding_error, 2)
-                rounding_error += (probability - adjusted_probability)
-            else:
-                adjusted_probability = round(1 - sum([float(p['value']) for p in probabilities]), 2)
-
-            probabilities.append({
+            adjusted_probability = str(round(probability, 2)) if i < len(flow_ids) - 1 else str(round(1 - sum(float(p['value']) for p in probabilities), 2))
+            prob_entry = {
                 "path_id": flow_id,
-                "value": str(adjusted_probability),
-                "condition_id": flow_id
-            })
+                "value": adjusted_probability
+            }
+
+            if flow_id in branch_rules_lookup:
+                prob_entry["condition_id"] = flow_id
+
+            probabilities.append(prob_entry)
 
         gateway_branching_probabilities.append({
             "gateway_id": gateway_id,
@@ -172,7 +179,8 @@ def calculate_gateway_branching_probabilities(simplified_gateway_rules, flow_arc
     return gateway_branching_probabilities
 
 
-def convert_to_branch_rules(gateway_analysis_results):
+@log_time
+def extract_branch_rules(gateway_analysis_results):
     branch_rules = []
 
     for gateway_id, flows in gateway_analysis_results.items():
@@ -187,17 +195,21 @@ def convert_to_branch_rules(gateway_analysis_results):
                         attr, operator, value = condition
                         formatted_condition = {"attribute": attr, "comparison": operator, "value": str(value)}
                         inner_conditions.append(formatted_condition)
-                    formatted_conditions.append(inner_conditions)
+                    if inner_conditions:  # Add only if there are conditions
+                        formatted_conditions.append(inner_conditions)
 
-            branch_rule = {
-                "id": flow_id,
-                "rules": formatted_conditions
-            }
-            branch_rules.append(branch_rule)
+            # Add branch rule only if there are any formatted conditions
+            if formatted_conditions:
+                branch_rule = {
+                    "id": flow_id,
+                    "rules": formatted_conditions
+                }
+                branch_rules.append(branch_rule)
 
     return branch_rules
 
 
+@log_time
 def simplify_rules(gateway_analysis_results):
     simplified_results = {}
     for gateway_id, flows in gateway_analysis_results.items():
@@ -212,7 +224,7 @@ def simplify_rules(gateway_analysis_results):
                         simplified_conditions.append((simplified_condition, 1))
                 else:
                     simplified_conditions.append(condition_set)
-            simplified_flows[flow_id] = simplified_conditions
+            simplified_flows[flow_id] = simplified_conditions if simplified_conditions else []
         simplified_results[gateway_id] = simplified_flows
     return simplified_results
 
@@ -221,23 +233,27 @@ def simplify_rule(rules):
     grouped_conditions = {}
     for attr, op, value in rules:
         if attr not in grouped_conditions:
-            grouped_conditions[attr] = []
-        grouped_conditions[attr].append((op, value))
+            grouped_conditions[attr] = {'=': set(), '>': [], '<=': []}
+        if op == '=':
+            grouped_conditions[attr]['='].add(value)
+        else:
+            grouped_conditions[attr][op].append(value)
 
     simplified_conditions = []
     for attr, ops_values in grouped_conditions.items():
-        greater_than_values = [v for op, v in ops_values if op == '>']
-        less_than_or_equal_values = [v for op, v in ops_values if op == '<=']
-        if greater_than_values:
-            max_greater_than = max(greater_than_values)
+        for value in ops_values['=']:
+            simplified_conditions.append((attr, '=', value))
+        if ops_values['>']:
+            max_greater_than = max(ops_values['>'])
             simplified_conditions.append((attr, '>', max_greater_than))
-        if less_than_or_equal_values:
-            min_less_than_or_equal = min(less_than_or_equal_values)
+        if ops_values['<=']:
+            min_less_than_or_equal = min(ops_values['<='])
             simplified_conditions.append((attr, '<=', min_less_than_or_equal))
 
     return simplified_conditions
 
 
+@log_time
 def filter_true_outcomes(gateway_analysis_results):
     filtered_results = {}
     for gateway_id, flows in gateway_analysis_results.items():
@@ -246,6 +262,8 @@ def filter_true_outcomes(gateway_analysis_results):
             true_rules = [rule for rule in rules if rule[1] == 1]
             if true_rules:
                 filtered_flows[flow_id] = true_rules
+            else:
+                filtered_flows[flow_id] = []
         if filtered_flows:
             filtered_results[gateway_id] = filtered_flows
     return filtered_results
@@ -255,9 +273,9 @@ def display_gateway_rules(gateway_rules):
     for gateway_id, flows in gateway_rules.items():
         print(f"\nGateway ID: {gateway_id}")
         for flow_id, rules in flows.items():
-            print(f"  Flow ID: {flow_id}")
+            print(f"\tFlow ID: {flow_id}")
             for rule in rules:
-                print(rule)
+                print(f"\t\t{rule}")
 
 
 def extract_rules(tree, feature_names):
@@ -280,10 +298,29 @@ def extract_rules(tree, feature_names):
     return rules
 
 
+def objective(trial, X, y):
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    param = {
+        'max_depth': trial.suggest_int('max_depth', 2, 32),
+        'min_samples_split': trial.suggest_int('min_samples_split', 2, 16),
+        'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 16),
+        'ccp_alpha': trial.suggest_float('ccp_alpha', 1e-5, 1e-1, log=True),
+    }
+
+    model = DecisionTreeClassifier(**param, random_state=42)
+    model.fit(X_train, y_train)
+    preds = model.predict(X_val)
+    accuracy = accuracy_score(y_val, preds)
+    return accuracy
+
+
+@log_time
 def discover_gateway_models(dataframes):
     gateway_analysis_results = {}
     for gateway_id, df in dataframes.items():
-        print(f"\nProcessing Gateway: {gateway_id}")
+        print(f"Processing Gateway: {gateway_id}")
 
         feature_columns = [col for col in df.columns if not col.startswith("Flow_")]
         target_columns = [col for col in df.columns if col.startswith("Flow_")]
@@ -293,15 +330,15 @@ def discover_gateway_models(dataframes):
             features = df[feature_columns]
             target = df[target_col]
 
-            ccp_alphas = np.linspace(0.0001, 0.01, 20)
-            tree = DecisionTreeClassifier(random_state=42, max_depth=5)
-            grid_search = GridSearchCV(estimator=tree, param_grid={'ccp_alpha': ccp_alphas}, cv=5)
-            grid_search.fit(features, target)
+            study = optuna.create_study(direction='maximize')
+            study.optimize(lambda trial: objective(trial, features, target), n_trials=100)
 
-            best_tree = grid_search.best_estimator_
+            best_params = study.best_params
+
+            best_tree = DecisionTreeClassifier(**best_params, random_state=42)
+            best_tree.fit(features, target)
 
             rules = extract_rules(best_tree.tree_, feature_names=best_tree.feature_names_in_)
-
             models_results[target_col] = rules
 
         gateway_analysis_results[gateway_id] = models_results
@@ -309,6 +346,7 @@ def discover_gateway_models(dataframes):
     return gateway_analysis_results
 
 
+@log_time
 def encode_dataframes(dataframes):
     gateway_encoders = {}
 
@@ -320,8 +358,11 @@ def encode_dataframes(dataframes):
 
         for col in df.columns:
             if col not in target_columns and df[col].dtype == 'object':
+                all_values = pd.concat([pd.Series(['']), df[col]]).unique()
+
                 encoder = LabelEncoder()
-                encoded_df[col] = encoder.fit_transform(df[col])
+                encoder.fit(all_values)
+                encoded_df[col] = encoder.transform(df[col])
                 encoders[col] = encoder
 
         dataframes[gateway_id] = encoded_df
@@ -330,6 +371,7 @@ def encode_dataframes(dataframes):
     return dataframes, gateway_encoders
 
 
+@log_time
 def gateways_to_dataframes(gateway_states):
     dataframes = {}
 
@@ -350,26 +392,27 @@ def gateways_to_dataframes(gateway_states):
             if flow not in df:
                 df[flow] = False
 
+        df.drop('index', axis=1, inplace=True)
         dataframes[gateway_id] = df
 
     return dataframes
 
 
-def discover_joins(gateway_states):
+@log_time
+def discover_joins(bpmn_graph):
     gateway_branching_probabilities = []
 
-    for gateway_id, details in list(gateway_states.items()):
-        if len(details['outgoing_flows']) == 1:
-            path_id = details['outgoing_flows'][0]
+    for element_id, element_info in bpmn_graph.element_info.items():
+        if element_info.is_gateway() and element_info.is_join():
             gateway_branching_probabilities.append({
-                "gateway_id": gateway_id,
-                "probabilities": [{"path_id": path_id, "value": "1"}]
+                "gateway_id": element_id,
+                "probabilities": [{"path_id": element_info.outgoing_flows[0], "value": "1"}]
             })
-            del gateway_states[gateway_id]
 
     return gateway_branching_probabilities
 
 
+@log_time
 def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
     completed_events = list()
     total_traces = 0
@@ -387,7 +430,6 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
     num = 0
 
     for trace in log_traces:
-        # print(f"Trace #{num}: {trace}")
         num += 1
         caseid = trace.attributes["concept:name"]
         total_traces += 1
@@ -395,8 +437,7 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
         trace_info = Trace(caseid)
         initial_events[caseid] = datetime(9999, 12, 31, tzinfo=pytz.UTC)
         for event in trace:
-            # print(event)
-            attributes = event.get("attributes", {})  # Assuming attributes are stored under the 'attributes' key
+            attributes = event.get("attributes", {})
             total_events += 1
             if is_trace_event_start_or_end(event, bpmn_graph):
                 # trace event is a start or end event, we skip it for further parsing
@@ -443,10 +484,6 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
 
         task_sequence = sort_by_completion_times(trace_info)
 
-        # print(f"\nTrace #{num}: {trace}")
-        # for event in trace_info.event_list:
-        #     print(event.attributes)
-
         is_correct, fired_tasks, pending_tokens, _, gateway_states = bpmn_graph.reply_trace(
             task_sequence, flow_arcs_frequency, True, trace_info.event_list
         )
@@ -454,26 +491,10 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
     return gateway_states
 
 
-def map_activity_names_to_ids(bpmn_model, namespaces):
-    activity_id_map = {}
-    for task in bpmn_model.findall('.//bpmn:task', namespaces):
-        activity_name = task.get('name')
-        activity_id = task.get('id')
-        activity_id_map[activity_name] = activity_id
-    return activity_id_map
-
-
+@log_time
 def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE):
     sorted_log = event_log.sort_values(by=log_ids.end_time)
 
-    # Drop unnecessary columns except for essential system columns
-    # columns_to_drop = [getattr(log_ids, attr) for attr in vars(log_ids) if getattr(log_ids, attr) in sorted_log.columns]
-    # system_columns_to_keep = [log_ids.case, log_ids.activity]
-    # columns_to_drop = [x for x in columns_to_drop if x not in system_columns_to_keep]
-    #
-    # sorted_log = sorted_log.drop(columns=columns_to_drop)
-
-    # Sample the event log by case and fill NaN values
     log_by_case = sample_event_log_by_case(sorted_log, log_ids, sampling_size)
     log_by_case = fill_nans(log_by_case, log_ids)
 
@@ -483,10 +504,9 @@ def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE
             string_values.append(col)
 
     log_by_case = scale_data(log_by_case, string_values)
-
     return log_by_case
 
-
+@log_time
 def sample_event_log_by_case(event_log: pd.DataFrame, log_ids: EventLogIDs, sampling_size: int = DEFAULT_SAMPLING_SIZE):
     event_log_reset = event_log.reset_index()
     event_log_sorted = event_log_reset.sort_values(by=[log_ids.case, 'index'])
@@ -500,12 +520,12 @@ def sample_event_log_by_case(event_log: pd.DataFrame, log_ids: EventLogIDs, samp
     sampled_cases = unique_cases[::step_size]
 
     sampled_log = event_log_sorted[event_log_sorted[log_ids.case].isin(sampled_cases)]
-
     sampled_log = sampled_log.drop(columns=['index'])
 
     return sampled_log
 
 
+@log_time
 def fill_nans(log, log_ids):
     def replace_initial_nans(series):
         if is_numeric_dtype(series):
@@ -525,6 +545,7 @@ def fill_nans(log, log_ids):
     return preprocessed_log
 
 
+@log_time
 def scale_data(log, encoded_columns, threshold=1e+37):
     log_scaled = log.copy()
     max_float = np.finfo(np.float32).max
@@ -562,7 +583,6 @@ def get_element_id_from_event_info(event, bpmn_graph: BPMNGraph):
         # and they both equals to task name
         return original_element_id
 
-    # TODO: check whether 'from_name' handles duplicated names of elements in the BPMN model
     element_id = bpmn_graph.from_name.get(task_name, "")
     return element_id
 
