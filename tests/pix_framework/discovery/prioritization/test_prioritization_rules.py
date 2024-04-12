@@ -1,6 +1,5 @@
-from pathlib import Path
-
 import pandas as pd
+
 from pix_framework.discovery.prioritization.rules import (
     _reverse_one_hot_encoding,
     discover_prioritization_rules,
@@ -63,14 +62,14 @@ def test_discover_prioritization_rules_with_extra_attribute():
     prioritization_rules = discover_prioritization_rules(prioritizations, "outcome")
     # Assert the rules
     assert (
-        sort_rules(prioritization_rules)
-        == sort_rules(prioritization_rules)
-        == sort_rules(
-            [
-                {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "750.0"}]]},
-                {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "300.0"}]]},
-            ]
-        )
+            sort_rules(prioritization_rules)
+            == sort_rules(prioritization_rules)
+            == sort_rules(
+        [
+            {"priority_level": 1, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "750.0"}]]},
+            {"priority_level": 2, "rules": [[{"attribute": "loan_amount", "comparison": ">", "value": "300.0"}]]},
+        ]
+    )
     )
 
 
