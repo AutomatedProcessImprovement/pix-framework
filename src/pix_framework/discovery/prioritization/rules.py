@@ -69,22 +69,25 @@ def _get_rules(data: pd.DataFrame, outcome: str) -> list:
     """
     # Discover 5 times and get the one with more confidence
     best_confidence = 0
+    best_support = 0
     best_rules = []
-    for i in range(5):
+    for i in range(3):
         # Train new model to extract 1 rule
         new_model = DecisionTreeClassifier()
         new_model.fit(data[[column for column in data.columns if column is not outcome]], data[outcome])
-        best_rules = _tree_to_best_rules(new_model, [column for column in data.columns if column is not outcome])
+        rules = _tree_to_best_rules(new_model, [column for column in data.columns if column is not outcome])
         # If any rule has been discovered
-        if len(best_rules) > 0:
+        if len(rules) > 0:
             # Measure confidence
-            predictions = _predict(best_rules, data.drop([outcome], axis=1))
+            predictions = _predict(rules, data.drop([outcome], axis=1))
             true_positives = [p and a for (p, a) in zip(predictions, data[outcome])]
             confidence = sum(true_positives) / sum(predictions)
+            support = sum(true_positives) / len(data)
             # Retain if it's better than the previous one
-            if confidence > best_confidence:
+            if confidence > best_confidence or (confidence == best_confidence and support > best_support):
                 best_confidence = confidence
-                best_rules = best_rules
+                best_support = support
+                best_rules = rules
     # Return the best one, or None if no rules found in any iteration
     return best_rules
 
@@ -114,7 +117,7 @@ def _tree_to_best_rules(tree, feature_names) -> list:
         else:
             # Leaf node
             current_impurity = tree_.impurity[current_node]
-            current_sample_sizes = tree_.value[current_node][0]  # Number of positive samples
+            current_sample_sizes = tree_.value[current_node][0] * tree_.n_node_samples[current_node]  # #PositiveSamples
             # If it is the best leaf node, save it
             if current_sample_sizes[0] < current_sample_sizes[1] and (  # Less samples with negative outcome
                 current_impurity < best_rule["impurity"]
@@ -139,8 +142,14 @@ def _summarize_rules(rules: list) -> list:
                 'attribute': attribute,
                 'comparison': 'in',
                 'value': "({},{}]".format(
-                    max([rule['value'] for rule in rules if rule['attribute'] == attribute and rule['comparison'] == ">"]),
-                    min([rule['value'] for rule in rules if rule['attribute'] == attribute and rule['comparison'] == "<="])
+                    max([
+                        rule['value'] for rule in rules
+                        if rule['attribute'] == attribute and rule['comparison'] == ">"
+                    ]),
+                    min([
+                        rule['value'] for rule in rules
+                        if rule['attribute'] == attribute and rule['comparison'] == "<="
+                    ])
                 )
             }]
         else:
