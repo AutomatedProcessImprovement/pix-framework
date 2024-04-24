@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 namespaces = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
 
-DISCRETE_ERROR_RATIO = 0.95
-DEFAULT_SAMPLING_SIZE = 5000
+DEFAULT_SAMPLING_SIZE = 25000
 
 
 def log_time(func):
