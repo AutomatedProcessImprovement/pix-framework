@@ -1,9 +1,9 @@
 import pandas as pd
 from attributes import discover_attributes
-from case_attribute import discover_case_attributes
 from pix_framework.io.event_log import EventLogIDs
 import pprint
 import time
+import os
 
 # Defining the log IDs
 PROSIMOS_LOG_IDS = EventLogIDs(
@@ -24,6 +24,11 @@ EVENT_AND_GLOBAL_FILE_PATH = "tests/pix_framework/assets/event_and_global_attrib
 MATH_TEST_PATH = "tests/pix_framework/assets/math_log.csv"
 DISCRETE_TEST_PATH = "tests/pix_framework/assets/discrete_log.csv"
 EXPERIMENTS_TEST_PATH = "D:/_est/PIX_discovery/Experiments/experiment_log_main.csv"
+MG_EXPERIMENTS_SHORT_TEST_PATH = "D:/_est/PIX_discovery/Experiments/mg_experiment_log_main.csv"
+ME_EXPERIMENTS_SHORT_TEST_PATH = "D:/_est/PIX_discovery/Experiments/me_experiment_log_main.csv"
+SG_EXPERIMENTS_SHORT_TEST_PATH = "D:/_est/PIX_discovery/Experiments/sg_experiment_log_main.csv"
+SE_EXPERIMENTS_SHORT_TEST_PATH = "D:/_est/PIX_discovery/Experiments/se_experiment_log_main.csv"
+C_EXPERIMENTS_SHORT_TEST_PATH = "D:/_est/PIX_discovery/Experiments/c_experiment_log_main.csv"
 
 def fetch_and_print_attributes(file_name, method, sizes, log_ids):
     for size in sizes:
@@ -58,7 +63,12 @@ if __name__ == "__main__":
         # EVENT_AND_GLOBAL_FILE_PATH,
         # MATH_TEST_PATH,
         # DISCRETE_TEST_PATH,
-        EXPERIMENTS_TEST_PATH
+        # EXPERIMENTS_TEST_PATH,
+        # MG_EXPERIMENTS_SHORT_TEST_PATH,
+        # ME_EXPERIMENTS_SHORT_TEST_PATH,
+        # SG_EXPERIMENTS_SHORT_TEST_PATH,
+        # SE_EXPERIMENTS_SHORT_TEST_PATH,
+        # C_EXPERIMENTS_SHORT_TEST_PATH
     ]
 
     discover_and_print_for_files(discover_attributes, files_to_discover, sizes_to_test, PROSIMOS_LOG_IDS)
