@@ -2,16 +2,12 @@ import numpy as np
 from data_filtering import filter_attribute_columns
 from sklearn.model_selection import train_test_split
 from case_attributes import discover_discrete_attribute
-from sklearn.linear_model import LinearRegression
-from metrics import calculate_discrete_metrics, get_metrics_by_type
-from m5py import M5Prime
+from metrics import get_metrics_by_type
 
 
 def perform_model_discovery(unique_activities, attr_log, log_type, attr, encoders, attr_results, log_ids):
     models = {
         'Frequency Analysis': discrete_frequency_analysis,
-        'Linear Regression': discrete_linear_regression_analysis,
-        'M5Prime': discrete_m5prime_analysis
     }
     metrics_keys = get_metrics_by_type("discrete")
 
@@ -44,65 +40,6 @@ def discrete_frequency_analysis(log_activity, attr, encoders):
     X_train = e_log_train[attr]
     X_test = e_log_test[attr]
     return discover_discrete_attribute(X_train, X_test, attr, encoders)
-
-
-def discrete_linear_regression_analysis(log_activity, attr, encoders):
-    X = log_activity[[f'prev_{attr}']].values.reshape(-1, 1)
-    y = log_activity[attr]
-
-    if len(log_activity) <= 5:
-        X_train = X_test = X
-        y_train = y_test = y
-    else:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-
-    y_pred_continuous = model.predict(X_test)
-
-    y_pred_encoded = np.round(y_pred_continuous).astype(int)
-    y_pred_encoded = np.clip(y_pred_encoded, 0, len(encoders[attr].classes_) - 1)
-
-    y_pred_decoded = encoders[attr].inverse_transform(y_pred_encoded)
-    y_true_decoded = encoders[attr].inverse_transform(y_test)
-
-    metrics = calculate_discrete_metrics(y_true_decoded, y_pred_decoded, encoders[attr].classes_, encoders, attr)
-    coef_str = " + ".join([f"{coef:.4f}*{attr}" for i, coef in enumerate(model.coef_)])
-    formula = f"{coef_str} + {model.intercept_:.4f}"
-
-    return formula, metrics
-
-
-def discrete_m5prime_analysis(log_activity, attr, encoders):
-    X = log_activity[[f'prev_{attr}']].values.reshape(-1, 1)
-    y = log_activity[attr]
-
-    if len(log_activity) <= 5:
-        X_train = X_test = X
-        y_train = y_test = y
-    else:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    y_train = np.array(y_train)
-    y_test = np.array(y_test)
-
-    model = M5Prime(use_smoothing=True, use_pruning=True)
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-
-    y_pred_encoded = np.round(y_pred).astype(int)
-    y_pred_encoded = np.clip(y_pred_encoded, 0, len(encoders[attr].classes_) - 1)
-
-    y_pred_decoded = encoders[attr].inverse_transform(y_pred_encoded)
-    y_true_decoded = encoders[attr].inverse_transform(y_test)
-
-    metrics = calculate_discrete_metrics(y_true_decoded, y_pred_decoded, encoders[attr].classes_, encoders, attr)
-    formula = model.as_pretty_text()
-
-    return formula, metrics
-
 
 def discover_global_and_event_discrete_attributes(e_log, g_log, e_log_features, g_log_features, attributes_to_discover, encoders, log_ids):
     results = {}

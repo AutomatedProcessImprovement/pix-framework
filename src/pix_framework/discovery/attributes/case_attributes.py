@@ -6,7 +6,7 @@ from metrics import calculate_continuous_metrics, calculate_discrete_metrics
 
 
 @log_time
-def discover_case_attributes(e_log, attributes_to_discover, encoders, log_ids, confidence_threshold):
+def discover_case_attributes(e_log, attributes_to_discover, encoders, log_ids, confidence_threshold=1.0):
     case_attributes = []
     metrics = {}
 
@@ -78,48 +78,3 @@ def discover_continuous_case_attribute(X_train, X_test, attribute):
     }
 
     return attribute_info, metrics
-
-
-@log_time
-def _handle_case_attributes(e_log, attributes_to_discover, log_ids, confidence_threshold, encoders):
-    case_attributes = []
-
-    for attribute in attributes_to_discover:
-        is_discrete = attribute in encoders.keys()
-
-        if is_discrete:
-            e_log_decoded = e_log.copy()
-            e_log_decoded[attribute] = encoders[attribute].inverse_transform(e_log[attribute])
-        else:
-            e_log_decoded = e_log
-
-        group_counts = e_log_decoded.groupby(log_ids.case)[attribute].apply(lambda x: (x == x.iloc[0]).sum())
-        case_lengths = e_log_decoded.groupby(log_ids.case).size()
-        confidences = group_counts / case_lengths
-
-        if confidences.mean() < confidence_threshold:
-            continue
-
-        if is_discrete:
-            unique_values = e_log_decoded[attribute].unique()
-            values = {value: 0 for value in unique_values}
-            for case_id, case_data in e_log_decoded.groupby(log_ids.case):
-                main_attribute = case_data[attribute].iloc[0]
-                values[main_attribute] += 1
-
-            num_cases = len(e_log_decoded[log_ids.case].unique())
-            case_attributes.append({
-                "name": attribute,
-                "type": "discrete",
-                "values": [{"key": value, "value": values[value] / num_cases} for value in values if values[value] > 0]
-            })
-        else:
-            data = [case_data[attribute].iloc[0] for case_id, case_data in e_log_decoded.groupby(log_ids.case)]
-            best_distribution = get_best_fitting_distribution(data)
-            case_attributes.append({
-                "name": attribute,
-                "type": "continuous",
-                "values": best_distribution.to_prosimos_distribution()
-            })
-
-    return case_attributes

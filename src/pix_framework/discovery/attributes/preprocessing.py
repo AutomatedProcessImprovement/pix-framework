@@ -94,28 +94,6 @@ def fill_nans(log, log_ids, is_event_log=False):
     return log
 
 
-# def fill_nans2(log, log_ids, is_event_log=False):
-#     def replace_initial_nans(series):
-#         if is_numeric_dtype(series):
-#             initial_value = 0
-#         else:
-#             initial_value = ''
-#         first_valid_index = series.first_valid_index()
-#         if first_valid_index is not None:
-#             series[:first_valid_index] = series[:first_valid_index].fillna(initial_value)
-#         return series
-#
-#     def preprocess_case(case_data):
-#         return case_data.apply(replace_initial_nans)
-#
-#     if is_event_log:
-#         preprocessed_log = (log.groupby(log_ids.case).apply(preprocess_case)).reset_index(drop=True)
-#     else:
-#         preprocessed_log = log.apply(replace_initial_nans)
-#
-#     preprocessed_log = preprocessed_log.ffill()
-#     return preprocessed_log
-
 @log_time
 def scale_data(log, encoded_columns):
     log_scaled = log.copy()
