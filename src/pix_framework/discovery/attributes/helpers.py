@@ -17,34 +17,6 @@ def subtract_lists(main_list, subtract_list):
     return [item for item in main_list if item not in subtract_list]
 
 
-def display_log_with_decoded_activities(log, log_ids, encoder, is_event_log=False):
-    log = log.copy()
-
-    activity_column = log_ids.activity
-    log[activity_column] = encoder.inverse_transform(log[activity_column])
-
-    columns_order = log.columns.tolist()
-
-    if is_event_log:
-        grouped = log.groupby('case_id', sort=False)
-    else:
-        grouped = [(None, log)]
-
-    max_widths = {}
-    for col in columns_order:
-        max_len = max([len(str(x)) for x in log[col].values] + [len(col)])
-        max_widths[col] = max_len + 2
-
-    header = "".join([f"{col.ljust(max_widths[col])}" for col in columns_order])
-    print(header)
-    print("-" * len(header))
-
-    for _, group in grouped:
-        for index, row in group.iterrows():
-            row_str = "".join([f"{str(row[col]).ljust(max_widths[col])}" for col in columns_order])
-            print(row_str)
-
-
 def print_results_table(model_results, metric_names):
     """
     Prints a results table for models based on a dynamic set of metrics.
@@ -81,14 +53,6 @@ def print_results_table(model_results, metric_names):
                 row_values.extend([g_score, e_score])
 
             print(row_format.format(*row_values))
-
-
-def display_attribute_metrics(metrics_dict):
-    for attribute, metrics in metrics_dict.items():
-        print(f"Metrics for {attribute}:")
-        for metric_name, metric_value in metrics.items():
-            print(f"    {metric_name}: {metric_value:.4f}")
-        print("")
 
 
 def categorize_attributes_and_print_tables(model_results):

@@ -20,7 +20,7 @@ def discover_global_and_event_continuous_attributes(e_log, g_log, e_log_features
     }
 
     for attr in attributes_to_discover:
-        print(f"=========================== {attr} ===========================")
+        print(f"=========================== {attr} (Continuous) ===========================")
         attr_results = {'models': {
             model_name: {
                 'total_scores': {
@@ -145,7 +145,6 @@ def apply_threshold(X, y, threshold):
 
 
 def m5prime_analysis(X_train, X_test, y_train, y_test, attribute):
-    print("M5PRIME")
     model = M5Prime(use_smoothing=True, use_pruning=True)
 
     X_combined = np.vstack((X_train, X_test))
