@@ -66,13 +66,19 @@ def discover_gateway_conditions(bpmn_model_path,
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
 
     dataframes = gateways_to_dataframes(gateway_states)
+    pprint.pprint(dataframes)
     dataframes, gateway_encoders = encode_dataframes(dataframes)
 
     true_or_flows = discover_true_or_flows(gateway_states, dataframes)
 
     gateway_rules = discover_gateway_models(dataframes)
+    display_gateway_rules(gateway_rules)
+
     filtered_gateway_rules = filter_true_outcomes(gateway_rules)
+    display_gateway_rules(filtered_gateway_rules)
+
     simplified_gateway_rules = simplify_rules(filtered_gateway_rules)
+    display_gateway_rules(simplified_gateway_rules)
 
     adjusted_and_decoded_rules = adjust_and_decode_conditions(simplified_gateway_rules, gateway_encoders)
     adjusted_and_decoded_rules = simplify_rules(adjusted_and_decoded_rules)

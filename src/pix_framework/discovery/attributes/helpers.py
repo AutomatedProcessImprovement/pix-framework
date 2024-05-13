@@ -26,8 +26,8 @@ def print_results_table(model_results, metric_names):
     - model_results: Dictionary containing the model results.
     - metric_names: List of metric names to include in the table.
     """
-    header_parts = ["{:<25}", "{:<20}", "{:<10}"] + ["{:>15}" + "{:>15}" for _ in metric_names]
-    row_parts = ["{:<25}", "{:<20}", "{:<10}"] + ["{:>15.5e}" + "{:>15.5e}" for _ in metric_names]
+    header_parts = ["{:<25}", "{:<30}", "{:<10}"] + ["{:>15}" + "{:>15}" for _ in metric_names]
+    row_parts = ["{:<25}", "{:<30}", "{:<10}"] + ["{:>15.5e}" + "{:>15.5e}" for _ in metric_names]
     header_format = " ".join(header_parts)
     row_format = " ".join(row_parts)
 
