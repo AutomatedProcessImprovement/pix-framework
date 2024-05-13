@@ -227,7 +227,7 @@ if __name__ == "__main__":
         # BASIC_CONDITIONS
     ]
     csv_folder_path = 'D:/_est/PIX_discovery/Experiments/conditions/test2'
-    test_range = [4]
+    test_range = [11]
 
     files_to_discover.extend(generate_model_csv_tuples(csv_folder_path, test_range))
 

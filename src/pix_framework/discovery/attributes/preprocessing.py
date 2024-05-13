@@ -1,3 +1,5 @@
+import pprint
+
 import pandas as pd
 import numpy as np
 
@@ -8,42 +10,138 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE):
+def preprocess_event_log(event_log, avoid_columns, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE):
     sorted_log = event_log.sort_values(by=log_ids.end_time)
-    columns_to_drop = [getattr(log_ids, attr) for attr in vars(log_ids) if getattr(log_ids, attr) in sorted_log.columns]
-    system_columns_to_keep = [log_ids.case, log_ids.activity]
-    columns_to_drop = [x for x in columns_to_drop if x not in system_columns_to_keep]
+    encoders = extract_encoders(event_log, avoid_columns)
 
     g_log = sample_until_case_end(sorted_log, log_ids, sampling_size)
-    g_log.drop(columns=columns_to_drop, inplace=True)
-    g_log = fill_nans(g_log, log_ids, False)
-
     e_log = sample_event_log_by_case(sorted_log, log_ids, sampling_size)
-    e_log.drop(columns=columns_to_drop, inplace=True)
-    e_log = fill_nans(e_log, log_ids, True)
 
-    empty_series = pd.Series([''])
+    g_OBS = process_global_attributes(g_log, avoid_columns, encoders.keys(), log_ids)
+    e_OBS = process_event_attributes(e_log, avoid_columns, encoders.keys(), log_ids)
+
+    g_dfs = convert_obs_to_dataframe(g_OBS, encoders)
+    e_dfs = convert_obs_to_dataframe(e_OBS, encoders)
+
+    g_dfs = scale_dataframes(g_dfs, encoders.keys())
+    e_dfs = scale_dataframes(e_dfs, encoders.keys())
+
+    g_dfs = calculate_difference_feature(g_dfs)
+    e_dfs = calculate_difference_feature(e_dfs)
+
+    return g_dfs, e_dfs, encoders
+
+
+def calculate_difference_feature(dfs):
+    for attribute, activity_dfs in dfs.items():
+        for activity, df in activity_dfs.items():
+            df[f'difference'] = df['current'] - df['previous']
+    return dfs
+
+
+def extract_encoders(event_log, avoid_columns):
     encoders = {}
-    for col in g_log.columns:
+    for col in event_log.columns:
+        if col not in avoid_columns:
+            if not np.issubdtype(event_log[col].dtype, np.number):
+                unique_values = [''] + event_log[col].dropna().unique().tolist()
+                le = LabelEncoder()
+                le.fit(unique_values)
+                encoders[col] = le
+    return encoders
 
-        if g_log[col].dtype == 'object':
-            g_log[col] = g_log[col].astype(str)
-            e_log[col] = e_log[col].astype(str)
 
-            all_values = pd.concat([empty_series, g_log[col], e_log[col]]).unique()
+def convert_obs_to_dataframe(obs, encoders):
+    dict = {}
+    for (activity, attribute), changes in obs.items():
+        df = pd.DataFrame(changes, columns=['previous', 'current'])
 
-            encoder = LabelEncoder()
-            encoder.fit(all_values)
+        if attribute in encoders:
+            encoder = encoders[attribute]
+            df['previous'] = df['previous'].apply(lambda x: encoder.transform([x])[0] if pd.notna(x) else -1)
+            df['current'] = df['current'].apply(lambda x: encoder.transform([x])[0] if pd.notna(x) else -1)
 
-            g_log[col] = encoder.transform(g_log[col])
-            e_log[col] = encoder.transform(e_log[col])
+        if attribute not in dict:
+            dict[attribute] = {}
+        dict[attribute][activity] = df
+    return dict
 
-            encoders[col] = encoder
 
-    g_log = scale_data(g_log, encoders.keys())
-    e_log = scale_data(e_log, encoders.keys())
+def is_starting(event):
+    return event['type'] == 'START'
 
-    return g_log, e_log, encoders
+
+def is_completing(event):
+    return event['type'] == 'END'
+
+
+def process_global_attributes(event_log, avoid_columns, encoded_columns, log_ids):
+    OBS = {}
+    T_split = []
+
+    for _, trace in event_log.groupby(log_ids.case):
+        for _, event in trace.iterrows():
+            T_split.append({'activity': event[log_ids.activity], 'type': 'START', 'time': event[log_ids.start_time]})
+            T_split.append({'activity': event[log_ids.activity], 'type': 'END', 'time': event[log_ids.end_time], **event})
+
+    T_split.sort(key=lambda e: e['time'])
+
+    for attribute in event_log.columns:
+        if attribute in avoid_columns:
+            continue
+
+        is_categorical = attribute in encoded_columns
+        C_V = '' if is_categorical else 0
+        V_init = {}
+
+        for event in T_split:
+            activity = event['activity']
+            if is_starting(event):
+                V_init[activity] = C_V
+            elif is_completing(event):
+                next_value = event[attribute] if attribute in event and pd.notnull(event[attribute]) else V_init[activity]
+                C_V = next_value
+
+                if (activity, attribute) not in OBS:
+                    OBS[(activity, attribute)] = []
+                OBS[(activity, attribute)].append((V_init[activity], next_value))
+                V_init[activity] = next_value
+
+    return OBS
+
+
+def process_event_attributes(event_log, avoid_columns, encoded_columns, log_ids):
+    OBS = {}
+    for _, trace in event_log.groupby(log_ids.case):
+        T_split = []
+
+        for _, event in trace.iterrows():
+            T_split.append({'activity': event[log_ids.activity], 'type': 'START', 'time': event[log_ids.start_time]})
+            T_split.append({'activity': event[log_ids.activity], 'type': 'END', 'time': event[log_ids.end_time], **event})
+
+        T_split.sort(key=lambda e: e['time'])
+
+        for attribute in event_log.columns:
+            if attribute in avoid_columns:
+                continue
+
+            is_categorical = attribute in encoded_columns
+            C_V = '' if is_categorical else 0
+            V_init = {}
+
+            for event in T_split:
+                activity = event['activity']
+                if is_starting(event):
+                    V_init[activity] = C_V
+                elif is_completing(event):
+                    next_value = event[attribute] if attribute in event and pd.notnull(event[attribute]) else V_init[activity]
+                    C_V = next_value
+                    if (activity, attribute) not in OBS:
+                        OBS[(activity, attribute)] = []
+
+                    OBS[(activity, attribute)].append((V_init[activity], next_value))
+                    V_init[activity] = next_value
+    return OBS
 
 
 @log_time
@@ -79,22 +177,20 @@ def sample_until_case_end(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZ
 
 
 @log_time
-def fill_nans(log, log_ids, is_event_log=False):
-    numeric_columns = log.select_dtypes(include=['number']).columns
-    object_columns = log.select_dtypes(include=['object']).columns
+def scale_dataframes(dfs, encoded_columns):
+    scaled_dfs = {}
+    for attribute, activity_dfs in dfs.items():
+        if attribute not in encoded_columns:
+            scaled_activity_dfs = {}
+            for activity, df in activity_dfs.items():
+                df_scaled = scale_data(df, encoded_columns)
+                scaled_activity_dfs[activity] = df_scaled
+            scaled_dfs[attribute] = scaled_activity_dfs
+        else:
+            scaled_dfs[attribute] = activity_dfs
+    return scaled_dfs
 
-    if is_event_log:
-        for case_id, group in log.groupby(log_ids.case):
-            log.loc[group.index, numeric_columns] = group[numeric_columns].fillna(method='ffill', axis=0).fillna(0)
-            log.loc[group.index, object_columns] = group[object_columns].fillna(method='ffill', axis=0).fillna('')
-    else:
-        log[numeric_columns] = log[numeric_columns].fillna(method='ffill', axis=0).fillna(0)
-        log[object_columns] = log[object_columns].fillna(method='ffill', axis=0).fillna('')
 
-    return log
-
-
-@log_time
 def scale_data(log, encoded_columns):
     log_scaled = log.copy()
     max_float32 = np.finfo(np.float32).max

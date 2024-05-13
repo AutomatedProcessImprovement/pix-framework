@@ -1,23 +1,32 @@
-import pandas as pd
-import numpy as np
+import pprint
+
 from helpers import log_time
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 from m5py import M5Prime
-from data_filtering import filter_consecutive_edge_values_global, filter_consecutive_edge_values_event
 from metrics import calculate_continuous_metrics, get_metrics_by_type
-from data_filtering import filter_attribute_columns
 
 
-def discover_global_and_event_continuous_attributes(e_log, g_log, e_log_features, g_log_features, attributes_to_discover, log_ids):
+@log_time
+def discover_global_and_event_continuous_attributes(g_dfs, e_dfs, attributes_to_discover):
     results = {}
     metrics_keys = get_metrics_by_type("continuous")
     model_functions = {
         'Linear Regression': linear_regression_analysis,
-        'Curve Fitting': curve_fitting_analysis,
-        'M5Prime': m5prime_analysis
+        'Curve Fitting Generators': curve_fitting_generators_analysis,
+        'M5Prime': m5prime_analysis,
+        'Curve Fitting Update Rules': curve_fitting_update_rules_analysis
     }
+
+    def process_attributes(dfs, attr_type):
+        for activity, df in dfs.items():
+            activity_difference = df['difference'].abs().sum()
+            if activity_difference == 0:
+                continue
+            for model_name, model_function in model_functions.items():
+                metrics, formula = model_function(df, attr)
+                update_model_results(attr_results, model_name, attr_type, activity, metrics, formula, metrics_keys)
 
     for attr in attributes_to_discover:
         print(f"=========================== {attr} (Continuous) ===========================")
@@ -28,56 +37,8 @@ def discover_global_and_event_continuous_attributes(e_log, g_log, e_log_features
                     'global': {key: 0 for key in metrics_keys}
                 }, 'activities': {}} for model_name in model_functions.keys()}}
 
-        unique_activities = e_log[log_ids.activity].unique()
-
-        e_attr_log = filter_attribute_columns(e_log, e_log_features, attr, log_ids)
-        g_attr_log = filter_attribute_columns(g_log, g_log_features, attr, log_ids)
-
-        for activity in unique_activities:
-            e_log_activity = e_attr_log[e_attr_log[log_ids.activity] == activity]
-            e_diff_metric_count = e_log_activity[f'diff_{attr}'].abs().sum()
-
-            if e_diff_metric_count > 0:
-                X = e_log_activity[[f'prev_{attr}']]
-                X_reshaped = X.values.reshape(-1, 1) if isinstance(X, pd.Series) else X
-                Y = e_log_activity[attr]
-                case_ids = e_log_activity[log_ids.case].values
-
-                if len(Y) <= 5:
-                    print("Too few samples for a meaningful train/test split. Using full dataset for both.")
-                    X_train = X_test = X_reshaped
-                    Y_train = Y_test = Y
-                    case_ids_train = case_ids_test = case_ids
-                else:
-                    X_train, X_test, Y_train, Y_test, case_ids_train, case_ids_test = \
-                        train_test_split(X_reshaped, Y, case_ids, test_size=0.2, random_state=42)
-
-                X_train_filtered, Y_train_filtered, case_ids_train_filtered = \
-                    filter_consecutive_edge_values_event(X_train, Y_train, case_ids_train)
-
-                for model_name, model_function in model_functions.items():
-                    event_metrics, event_formula = model_function(X_train_filtered, X_test, Y_train_filtered, Y_test, attr)
-                    update_model_results(attr_results, model_name, 'event', activity, event_metrics, event_formula, metrics_keys)
-
-        for activity in unique_activities:
-            g_log_activity = g_attr_log[g_attr_log[log_ids.activity] == activity]
-            g_diff_metric_count = g_log_activity[f'diff_{attr}'].abs().sum()
-            if g_diff_metric_count > 0:
-                X = g_log_activity[[f'prev_{attr}']]
-                X_reshaped = X.values.reshape(-1, 1) if isinstance(X, pd.Series) else X
-                Y = g_log_activity[attr]
-
-                if len(Y) <= 5:
-                    X_train = X_test = X_reshaped
-                    Y_train = Y_test = Y
-                else:
-                    X_train, X_test, Y_train, Y_test = train_test_split(X_reshaped, Y, test_size=0.2, random_state=42)
-                X_train_filtered, Y_train_filtered = filter_consecutive_edge_values_global(X_train, Y_train)
-
-                for model_name, model_function in model_functions.items():
-                    global_metrics, global_formula = model_function(X_train_filtered, X_test, Y_train_filtered, Y_test, attr)
-                    update_model_results(attr_results, model_name, 'global', activity, global_metrics, global_formula, metrics_keys)
-
+        process_attributes(g_dfs[attr], 'global')
+        process_attributes(e_dfs[attr], 'event')
         results[attr] = attr_results
 
     return results
@@ -100,102 +61,121 @@ def update_model_results(attr_results, model_name, log_type, activity, metrics, 
     }
 
 
-def linear_regression_analysis(X_train, X_test, y_train, y_test, attribute):
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-
-    metrics = calculate_continuous_metrics(y_test, y_pred)
-
-    coef_str = " + ".join([f"{coef:.4f}*{attribute}" for i, coef in enumerate(model.coef_)])
-    formula = f"{coef_str} + {model.intercept_:.4f}"
-
-    return metrics, formula
-
-
-def curve_fitting_analysis(X_train, X_test, y_train, y_test, attribute):
+def linear_regression_analysis(df, attribute):
     try:
-        combined_data = np.concatenate([y_train, y_test])
+        X_train, X_test, y_train, y_test = train_test_split(df[['previous']], df['current'], test_size=0.5, random_state=42)
 
-        combined_data_flattened = combined_data.flatten()
+        model = LinearRegression()
+        model.fit(X_train, y_train)
 
-        best_distribution = get_best_fitting_distribution(combined_data_flattened, filter_outliers=True)
-        y_pred = best_distribution.generate_sample(len(y_test))
+        y_pred = model.predict(X_test)
 
         metrics = calculate_continuous_metrics(y_test, y_pred)
+
+        coef_str = " + ".join([f"{coef:.4f}*{attribute}" for i, coef in enumerate(model.coef_)])
+        formula = f"{coef_str} + {model.intercept_:.4f}"
+
+        return metrics, formula
+    except Exception as e:
+        error_metrics = {metric: float('inf') for metric in calculate_continuous_metrics([0], [0]).keys()}
+        return error_metrics, None
+
+
+def curve_fitting_generators_analysis(df, attribute):
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(df['previous'], df['current'], test_size=0.5, random_state=42)
+
+        y_train_flattened = y_train.values.flatten()
+        y_test_flattened = y_test.values.flatten()
+
+        best_distribution = get_best_fitting_distribution(y_train_flattened, filter_outliers=True)
+
+        y_pred_flattened = best_distribution.generate_sample(len(y_test_flattened))
+
+        metrics = calculate_continuous_metrics(y_test_flattened, y_pred_flattened)
 
         distribution_info = best_distribution.to_prosimos_distribution()
 
         return metrics, distribution_info
     except Exception as e:
         distribution_info = None
-        error_metrics = {
-            'MSE': float('inf'),
-            'MAE': float('inf'),
-            'MedAD': float('inf'),
-            'EMD': float('inf')
-        }
+        error_metrics = {metric: float('inf') for metric in calculate_continuous_metrics([0], [0]).keys()}
         return error_metrics, distribution_info
 
 
-def apply_threshold(X, y, threshold):
-    """Applies a threshold to filter out values from X and y."""
-    valid_indices = (y >= -threshold) & (y <= threshold)
-    return X[valid_indices], y[valid_indices]
+def curve_fitting_update_rules_analysis(df, attribute):
+    try:
+        train, test = train_test_split(df['difference'], test_size=0.5, random_state=42)
+
+        difference_distribution = get_best_fitting_distribution(train, filter_outliers=False)
+
+        pred = difference_distribution.generate_sample(len(test))
+
+        metrics = calculate_continuous_metrics(test, pred)
+
+        formula = f"{attribute} + {difference_distribution}"
+
+        return metrics, formula
+    except Exception as e:
+        print(e)
+        distribution_info = None
+        error_metrics = {metric: float('inf') for metric in calculate_continuous_metrics([0], [0]).keys()}
+        return error_metrics, distribution_info
 
 
-def m5prime_analysis(X_train, X_test, y_train, y_test, attribute):
-    model = M5Prime(use_smoothing=True, use_pruning=True)
+def m5prime_analysis(df, attribute):
+    try:
+        df.reset_index(drop=True, inplace=True)
 
-    X_combined = np.vstack((X_train, X_test))
-    y_combined = np.concatenate((y_train, y_test))
+        X_train, X_test, y_train, y_test = train_test_split(df['previous'], df['current'], test_size=0.5, random_state=42)
 
-    # Initial threshold, M5Prime cannot handle values above it
-    initial_threshold = 1.9770910581033629e+37
-    threshold = initial_threshold
+        X_train = X_train.values.reshape(-1, 1)
+        X_test = X_test.values.reshape(-1, 1)
 
-    success = False
-    while not success:
-        try:
-            X_adjusted, y_adjusted = apply_threshold(X_combined, y_combined, threshold)
+        y_train.reset_index(drop=True, inplace=True)
+        y_test.reset_index(drop=True, inplace=True)
 
-            if len(y_adjusted) < 5:
-                print(f"Not enough samples to perform split after applying threshold {threshold}.")
-                return None, None
+        model = M5Prime(use_smoothing=True, use_pruning=True)
+        model.fit(X_train, y_train)
 
-            X_train_adjusted, X_test_adjusted, y_train_adjusted, y_test_adjusted = train_test_split(
-                X_adjusted, y_adjusted, test_size=0.2, random_state=42)
+        y_pred = model.predict(X_test)
 
-            model.fit(X_train_adjusted, y_train_adjusted)
-            success = True
-        except ValueError as e:
-            print(f"Adjusting threshold down from {threshold} due to error: {str(e)}")
-            threshold *= 0.9
+        metrics = calculate_continuous_metrics(y_test, y_pred)
 
-            if threshold < 1e+30:
-                print("Threshold adjusted too low. Model fitting is not feasible with current data.")
-                return None, None
+        formula = model.as_pretty_text()
 
-    # After successful fitting, predict and calculate metrics
-    y_pred = model.predict(X_test_adjusted)
-    metrics = calculate_continuous_metrics(y_test_adjusted, y_pred)
-
-    formula = model.as_pretty_text()
-
-    return metrics, formula
+        return metrics, formula
+    except Exception as e:
+        formula = None
+        error_metrics = {metric: float('inf') for metric in calculate_continuous_metrics([0], [0]).keys()}
+        return error_metrics, formula
 
 
 @log_time
-def discover_fixed_global_attributes(event_log, attributes_to_discover, confidence_threshold, encoders):
+def discover_fixed_global_attributes(dfs, attributes_to_discover, confidence_threshold, encoders):
     global_attributes = []
     for attribute in attributes_to_discover:
-        max_frequency = event_log[attribute].value_counts(dropna=False).iloc[0] / len(event_log)
+        if attribute not in dfs:
+            continue
+
+        dfs_activities = dfs[attribute]
+
+        value_counts = {}
+        total_count = 0
+        for activity, df in dfs_activities.items():
+            for value, count in df['current'].value_counts(dropna=False).items():
+                if value in value_counts:
+                    value_counts[value] += count
+                else:
+                    value_counts[value] = count
+                total_count += count
+
+        max_frequency_value = max(value_counts, key=value_counts.get)
+        max_frequency = value_counts[max_frequency_value] / total_count
 
         if max_frequency >= confidence_threshold:
-            attribute_value = event_log[attribute].iloc[0]
-
-            if attribute in encoders.keys():
-                decoded_attribute_value = encoders[attribute].inverse_transform([attribute_value])[0]
+            if attribute in encoders:
+                decoded_attribute_value = encoders[attribute].inverse_transform([max_frequency_value])[0]
                 global_attributes.append({
                     "name": attribute,
                     "type": "discrete",
@@ -207,7 +187,7 @@ def discover_fixed_global_attributes(event_log, attributes_to_discover, confiden
                     "type": "continuous",
                     "values": {
                         "distribution_name": "fix",
-                        "distribution_params": [{"value": attribute_value}]
+                        "distribution_params": [{"value": max_frequency_value}]
                     }
                 })
     return global_attributes

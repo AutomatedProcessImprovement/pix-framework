@@ -1,5 +1,5 @@
 import pandas as pd
-from attributes import discover_attributes
+from attribute_discovery import discover_attributes
 from pix_framework.io.event_log import EventLogIDs
 import pprint
 import time
@@ -12,7 +12,9 @@ REAL_LIFE_LOG_IDS = EventLogIDs(
     resource="resource",
 )
 
-REAL_LIFE = "D:/_est/PIX_discovery/Experiments/real_life/BPIC2019.csv"
+REAL_LIFE = "D:/_est/PIX_discovery/Experiments/real_life/BPIC2019/BPIC2019.csv"
+# REAL_LIFE = "D:/_est/PIX_discovery/Experiments/real_life/Sepsis/Sepsis_log.csv"
+# REAL_LIFE = "D:/_est/PIX_discovery/Experiments/real_life/Trafic/Trafic_log.csv"
 
 def fetch_and_print_attributes(file_name, method, sizes, log_ids):
     for size in sizes:
