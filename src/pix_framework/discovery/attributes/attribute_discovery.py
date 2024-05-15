@@ -148,7 +148,7 @@ def format_attribute_results(discrete_results, encoder):
 
             global_attribute = {
                 "name": attr_name,
-                "type": attribute_format,
+                "type": 'continuous' if attribute_format in ['continuous', 'expression', 'dtree'] else 'discrete',
                 "values": placeholder_values
             }
             if global_attribute not in global_attributes:

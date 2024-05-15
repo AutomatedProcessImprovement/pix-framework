@@ -35,11 +35,12 @@ def discrete_frequency_analysis(log_activity, attr, encoders):
         e_log_train = log_activity
         e_log_test = log_activity
     else:
-        e_log_train, e_log_test = train_test_split(log_activity, test_size=0.2, random_state=42)
+        e_log_train, e_log_test = train_test_split(log_activity, test_size=0.5, random_state=42)
 
     X_train = e_log_train[attr]
     X_test = e_log_test[attr]
-    return discover_discrete_attribute(X_train, X_test, attr, encoders)
+    attribute_info, metrics = discover_discrete_attribute(X_train, X_test, attr, encoders)
+    return attribute_info['values'], metrics
 
 def discover_global_and_event_discrete_attributes(e_log, g_log, e_log_features, g_log_features, attributes_to_discover, encoders, log_ids):
     results = {}

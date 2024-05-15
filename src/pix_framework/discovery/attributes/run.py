@@ -5,7 +5,6 @@ import pprint
 import time
 import os
 
-# Defining the log IDs
 PROSIMOS_LOG_IDS = EventLogIDs(
     case="case_id",
     activity="activity",
@@ -15,20 +14,29 @@ PROSIMOS_LOG_IDS = EventLogIDs(
     resource="resource",
 )
 
+EXPERIMENTS_LOG_IDS = EventLogIDs(
+    case="case_id",
+    activity="activity",
+    enabled_time="enable_time",
+    start_time="Start_Time",
+    end_time="End_Time",
+    resource="resource",
+)
+
 # Constants for file paths
 LOG_PATH_EXAMPLE = "D:/path/file.csv"
 EXPERIMENTS_TEST_PATH = "D:/_est/PIX_discovery/Experiments/experiment_log_main.csv"
+SEPSIS_PATH = r"D:\_est\PIX_discovery\Experiments\real_life\Sepsis\Sepsis.csv"
+TRAFIC_PATH = r"D:\_est\PIX_discovery\Experiments\real_life\Trafic\Trafic.csv"
 
 
 def fetch_and_print_attributes(file_name, method, log_ids):
-    start_time = time.time()  # Start time
+    start_time = time.time()
 
     event_log = pd.read_csv(file_name)
-
-    # Fetching the results from method and printing them
     results = method(event_log, log_ids=log_ids)
 
-    end_time = time.time()  # End time
+    end_time = time.time()
     print(f"\n{file_name.split('/')[-1]} execution time: {end_time - start_time:.2f} seconds\n\n\n\n")
 
 
@@ -40,11 +48,13 @@ def discover_and_print_for_files(method, file_paths, log_ids):
 
 if __name__ == "__main__":
     files_to_discover = [
-        LOG_PATH_EXAMPLE,
-        EXPERIMENTS_TEST_PATH
+        # LOG_PATH_EXAMPLE,
+        # EXPERIMENTS_TEST_PATH,
+        # SEPSIS_PATH,
+        # TRAFIC_PATH
     ]
 
-    discover_and_print_for_files(discover_attributes, files_to_discover, PROSIMOS_LOG_IDS)
+    discover_and_print_for_files(discover_attributes, files_to_discover, EXPERIMENTS_LOG_IDS)
 
 
 

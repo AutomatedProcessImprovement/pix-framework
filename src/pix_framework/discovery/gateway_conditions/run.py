@@ -12,7 +12,6 @@ from log_distance_measures.cycle_time_distribution import cycle_time_distributio
 from log_distance_measures.config import AbsoluteTimestampType, discretize_to_hour
 
 
-# Defining the log IDs
 PROSIMOS_LOG_IDS = EventLogIDs(
     case="case_id",
     activity="activity",
@@ -28,7 +27,6 @@ BASIC_CONDITIONS = ("D:/_est/PIX_discovery/Experiments/conditions/basic_conditio
 
 def generate_model_csv_tuples(csv_folder_path, range):
     tuples_list = []
-    # Dictionaries to hold the mapping of prefixes to BPMN paths
     bpmn_paths = {
         'xor': 'D:/_est/PIX_discovery/Experiments/conditions/test2/basic_xor_condition_model.bpmn',
         'or': 'D:/_est/PIX_discovery/Experiments/conditions/test2/basic_or_condition_model.bpmn'
@@ -123,7 +121,6 @@ def discover_and_print_for_files(method, file_paths, sizes, log_ids):
         simulation_warnings_path = os.path.join(os.path.dirname(event_log_path), "simulation_warnings.txt")
         search_string = "conditions evaluated to the same result"
 
-        # Initialize the dictionary for this event log if not already done
         if base_name not in all_metrics:
             all_metrics[base_name] = {"condition_metrics": [], "probability_metrics": []}
 
@@ -151,7 +148,6 @@ def discover_and_print_for_files(method, file_paths, sizes, log_ids):
             all_metrics[base_name]["condition_metrics"].append(condition_metrics)
             all_metrics[base_name]["probability_metrics"].append(probability_metrics)
 
-    # After processing all files, print or process the collected metrics
     print("\nFinal Metrics:")
     print_metrics(all_metrics)
 
@@ -170,7 +166,6 @@ def print_metrics(metrics):
             cond_metrics = metrics['condition_metrics'][run_index]
             prob_metrics = metrics['probability_metrics'][run_index]
 
-            # Creating a single row per run, juxtaposing condition and probability metrics
             row = {'Model': model, 'Run': run_index + 1}
             for metric_name in cond_metrics.keys():
                 row[f'Cond_{metric_name}'] = cond_metrics.get(metric_name, 'N/A')
@@ -180,8 +175,8 @@ def print_metrics(metrics):
 
     df = pd.DataFrame(data_for_df)
 
-    folder_path = 'D:/_est/PIX_discovery/Experiments/conditions/test2'  # Specify your folder path here
-    csv_filename = 'simulation_metrics.csv'  # Specify your desired CSV filename
+    folder_path = 'D:/_est/PIX_discovery/Experiments/conditions/test2'
+    csv_filename = 'simulation_metrics.csv'
     csv_path = f'{folder_path}/{csv_filename}'
 
     df.to_csv(csv_path, index=False)
@@ -227,14 +222,10 @@ if __name__ == "__main__":
         # BASIC_CONDITIONS
     ]
     csv_folder_path = 'D:/_est/PIX_discovery/Experiments/conditions/test2'
-    test_range = [4]
+    test_range = [1]
 
     files_to_discover.extend(generate_model_csv_tuples(csv_folder_path, test_range))
-
-
     pprint.pprint(files_to_discover)
-    # files_to_discover.append(generate_model_csv_tuples(bpmn_path_or, csv_folder_path, or_range))
-
     discover_and_print_for_files(discover_gateway_conditions, files_to_discover, sizes_to_test, PROSIMOS_LOG_IDS)
 
 

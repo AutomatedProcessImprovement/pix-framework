@@ -6,6 +6,7 @@ import time
 import pprint
 from sklearn.tree import _tree
 from sklearn.preprocessing import LabelEncoder
+import re
 
 from bpmn_parser import parse_simulation_model
 from replayer import Trace, parse_dataframe
@@ -55,6 +56,7 @@ def discover_gateway_conditions(bpmn_model_path,
     ]
 
     bpmn_graph = parse_simulation_model(bpmn_model_path)
+    flow_prefixes = ["Flow_", "edge", "node_"]
     branching_probabilities = discover_joins(bpmn_graph)
 
     event_log = pd.read_csv(event_log_path)
@@ -66,11 +68,11 @@ def discover_gateway_conditions(bpmn_model_path,
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
 
     dataframes = gateways_to_dataframes(gateway_states)
-    dataframes, gateway_encoders = encode_dataframes(dataframes)
+    dataframes, gateway_encoders = encode_dataframes(dataframes, flow_prefixes)
 
-    true_or_flows = discover_true_or_flows(gateway_states, dataframes)
+    true_or_flows = discover_true_or_flows(gateway_states, dataframes, flow_prefixes)
 
-    gateway_rules = discover_gateway_models(dataframes)
+    gateway_rules = discover_gateway_models(dataframes, flow_prefixes)
     filtered_gateway_rules = filter_true_outcomes(gateway_rules)
     simplified_gateway_rules = simplify_rules(filtered_gateway_rules)
 
@@ -89,15 +91,15 @@ def discover_gateway_conditions(bpmn_model_path,
     return result
 
 
-def discover_true_or_flows(gateway_states, dataframes):
+def discover_true_or_flows(gateway_states, dataframes, prefixes):
     branch_rules = []
 
     for gateway_id, gateway_info in gateway_states.items():
         if gateway_info['type'] == 'OR':
             df = dataframes[gateway_id]
 
-            always_true_columns = [col for col in df.columns if col.startswith('Flow_') and df[col].all()]
-            non_flow_columns = [col for col in df.columns if not col.startswith('Flow_')]
+            always_true_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes) and df[col].all()]
+            non_flow_columns = [col for col in df.columns if not any(col.startswith(prefix) for prefix in prefixes)]
 
             for col in always_true_columns:
                 if non_flow_columns:
@@ -114,7 +116,7 @@ def discover_true_or_flows(gateway_states, dataframes):
 
 
 @log_time
-def adjust_and_decode_conditions(conditions, encoders):
+def adjust_and_decode_conditions2(conditions, encoders):
     adjusted_conditions = []
     for condition in conditions:
         attribute, operator, raw_value = condition
@@ -140,7 +142,7 @@ def adjust_and_decode_conditions(gateway_rules, gateway_encoders):
             adjusted_conditions_outcome = []
             for conditions_outcome_pair in conditions_outcomes_list:
                 conditions, outcome = conditions_outcome_pair
-                adjusted_conditions = adjust_and_decode_conditions(conditions, encoders)
+                adjusted_conditions = adjust_and_decode_conditions2(conditions, encoders)
                 adjusted_conditions_outcome.append((adjusted_conditions, outcome))
             adjusted_rules[gateway_id][flow_id] = adjusted_conditions_outcome
     return adjusted_rules
@@ -187,17 +189,15 @@ def extract_branch_rules(gateway_analysis_results):
             formatted_conditions = []
 
             for condition_set in conditions_list:
-                # Check if the outcome is True, then process
                 if condition_set[1] == 1:
                     inner_conditions = []
                     for condition in condition_set[0]:
                         attr, operator, value = condition
                         formatted_condition = {"attribute": attr, "comparison": operator, "value": str(value)}
                         inner_conditions.append(formatted_condition)
-                    if inner_conditions:  # Add only if there are conditions
+                    if inner_conditions:
                         formatted_conditions.append(inner_conditions)
 
-            # Add branch rule only if there are any formatted conditions
             if formatted_conditions:
                 branch_rule = {
                     "id": flow_id,
@@ -316,13 +316,13 @@ def objective(trial, X, y):
 
 
 @log_time
-def discover_gateway_models(dataframes):
+def discover_gateway_models(dataframes, prefixes):
     gateway_analysis_results = {}
     for gateway_id, df in dataframes.items():
         print(f"Processing Gateway: {gateway_id}")
 
-        feature_columns = [col for col in df.columns if not col.startswith("Flow_")]
-        target_columns = [col for col in df.columns if col.startswith("Flow_")]
+        feature_columns = [col for col in df.columns if not any(col.startswith(prefix) for prefix in prefixes)]
+        target_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes)]
 
         models_results = {}
         for target_col in target_columns:
@@ -346,27 +346,31 @@ def discover_gateway_models(dataframes):
 
 
 @log_time
-def encode_dataframes(dataframes):
+def encode_dataframes(dataframes, prefixes):
     gateway_encoders = {}
 
     for gateway_id, df in dataframes.items():
         encoded_df = df.copy()
         encoders = {}
 
-        target_columns = [col for col in df.columns if col.startswith("Flow_")]
+        target_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes)]
 
         for col in df.columns:
-            if col not in target_columns and df[col].dtype == 'object':
-                all_values = pd.concat([pd.Series(['']), df[col]]).unique()
+            if col not in target_columns and (df[col].dtype == 'object' or df[col].dtype == 'bool'):
+                if df[col].dtype == bool:
+                    encoded_df[col] = encoded_df[col].astype(str)
+
+                encoded_df[col] = encoded_df[col].astype(str)
+
+                all_values = pd.concat([pd.Series(['']), encoded_df[col]]).unique()
 
                 encoder = LabelEncoder()
                 encoder.fit(all_values)
-                encoded_df[col] = encoder.transform(df[col])
+                encoded_df[col] = encoder.transform(encoded_df[col])
                 encoders[col] = encoder
 
         dataframes[gateway_id] = encoded_df
         gateway_encoders[gateway_id] = encoders
-
     return dataframes, gateway_encoders
 
 
@@ -391,7 +395,8 @@ def gateways_to_dataframes(gateway_states):
             if flow not in df:
                 df[flow] = False
 
-        df.drop('index', axis=1, inplace=True)
+        if 'index' in df.columns:
+            df.drop('index', axis=1, inplace=True)
         dataframes[gateway_id] = df
 
     return dataframes
@@ -578,8 +583,6 @@ def get_element_id_from_event_info(event, bpmn_graph: BPMNGraph):
     task_name = event.get("concept:name", "")
 
     if original_element_id != "" and original_element_id != task_name:
-        # when log file is in CSV format, then task_name == original_element_id
-        # and they both equals to task name
         return original_element_id
 
     element_id = bpmn_graph.from_name.get(task_name, "")

@@ -26,7 +26,7 @@ def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE
     encoders = {}
     for col in g_log.columns:
 
-        if g_log[col].dtype == 'object':
+        if g_log[col].dtype == 'object' or g_log[col].dtype == 'bool':
             g_log[col] = g_log[col].astype(str)
             e_log[col] = e_log[col].astype(str)
 
