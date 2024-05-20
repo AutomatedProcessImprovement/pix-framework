@@ -60,7 +60,7 @@ def parse_simulation_model(bpmn_path):
                 elements_map[flow_arc.attrib["sourceRef"]]["out"] += 1
             if flow_arc.attrib["targetRef"] in elements_map:
                 elements_map[flow_arc.attrib["targetRef"]]["in"] += 1
-            bpmn_graph.add_flow_arc(flow_arc.attrib["id"], flow_arc.attrib["sourceRef"], flow_arc.attrib["targetRef"])
+            # bpmn_graph.add_flow_arc(flow_arc.attrib["id"], flow_arc.attrib["sourceRef"], flow_arc.attrib["targetRef"])
 
         # Adding fake gateways for tasks with multiple incoming/outgoing flow arcs
         join_gateways = dict()
