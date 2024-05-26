@@ -304,6 +304,22 @@ class DurationDistribution:
 
         return distribution
 
+    def to_simple_function_call(self) -> str:
+        if self.type == DistributionType.FIXED:
+            return f"fix({self.mean})"
+        elif self.type == DistributionType.UNIFORM:
+            return f"uniform({self.min}, {self.max})"
+        elif self.type == DistributionType.NORMAL:
+            return f"norm({self.mean}, {self.std}, {self.min}, {self.max})"
+        elif self.type == DistributionType.EXPONENTIAL:
+            return f"expon({self.mean}, {self.min}, {self.max})"
+        elif self.type == DistributionType.LOG_NORMAL:
+            return f"lognorm({self.mean}, {self.var}, {self.min}, {self.max})"
+        elif self.type == DistributionType.GAMMA:
+            return f"gamma({self.mean}, {self.var}, {self.min}, {self.max})"
+        else:
+            raise ValueError(f"Unsupported distribution: {self.type}")
+
     def __str__(self):
         return "DurationDistribution(name: {}, mean: {}, var: {}, std: {}, min: {}, max: {})".format(
             self.type.value, self.mean, self.var, self.std, self.min, self.max

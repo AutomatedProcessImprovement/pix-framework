@@ -6,6 +6,7 @@ import time
 import pprint
 from sklearn.tree import _tree
 from sklearn.preprocessing import LabelEncoder
+import xml.etree.ElementTree as ET
 
 from bpmn_parser import parse_simulation_model
 from replayer import Trace, parse_dataframe
@@ -55,6 +56,7 @@ def discover_gateway_conditions(bpmn_model_path,
     ]
 
     bpmn_graph = parse_simulation_model(bpmn_model_path)
+    flow_prefixes = ["Flow_", "edge", "node"]
     branching_probabilities = discover_joins(bpmn_graph)
 
     event_log = pd.read_csv(event_log_path)
@@ -66,23 +68,17 @@ def discover_gateway_conditions(bpmn_model_path,
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
 
     dataframes = gateways_to_dataframes(gateway_states)
-    pprint.pprint(dataframes)
-    dataframes, gateway_encoders = encode_dataframes(dataframes)
+    dataframes, gateway_encoders = encode_dataframes(dataframes, flow_prefixes)
 
-    true_or_flows = discover_true_or_flows(gateway_states, dataframes)
-
-    gateway_rules = discover_gateway_models(dataframes)
-    display_gateway_rules(gateway_rules)
+    true_or_flows = discover_true_or_flows(gateway_states, dataframes, flow_prefixes)
+    gateway_rules = discover_gateway_models(dataframes, flow_prefixes)
 
     filtered_gateway_rules = filter_true_outcomes(gateway_rules)
-    display_gateway_rules(filtered_gateway_rules)
 
     simplified_gateway_rules = simplify_rules(filtered_gateway_rules)
-    display_gateway_rules(simplified_gateway_rules)
 
     adjusted_and_decoded_rules = adjust_and_decode_conditions(simplified_gateway_rules, gateway_encoders)
     adjusted_and_decoded_rules = simplify_rules(adjusted_and_decoded_rules)
-    display_gateway_rules(adjusted_and_decoded_rules)
 
     branch_rules = extract_branch_rules(adjusted_and_decoded_rules)
     branch_rules.extend(true_or_flows)
@@ -95,15 +91,15 @@ def discover_gateway_conditions(bpmn_model_path,
     return result
 
 
-def discover_true_or_flows(gateway_states, dataframes):
+def discover_true_or_flows(gateway_states, dataframes, prefixes):
     branch_rules = []
 
     for gateway_id, gateway_info in gateway_states.items():
         if gateway_info['type'] == 'OR':
             df = dataframes[gateway_id]
 
-            always_true_columns = [col for col in df.columns if col.startswith('Flow_') and df[col].all()]
-            non_flow_columns = [col for col in df.columns if not col.startswith('Flow_')]
+            always_true_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes) and df[col].all()]
+            non_flow_columns = [col for col in df.columns if not any(col.startswith(prefix) for prefix in prefixes)]
 
             for col in always_true_columns:
                 if non_flow_columns:
@@ -119,8 +115,7 @@ def discover_true_or_flows(gateway_states, dataframes):
     return branch_rules
 
 
-@log_time
-def adjust_and_decode_conditions(conditions, encoders):
+def adjust_and_decode_conditions2(conditions, encoders):
     adjusted_conditions = []
     for condition in conditions:
         attribute, operator, raw_value = condition
@@ -146,7 +141,7 @@ def adjust_and_decode_conditions(gateway_rules, gateway_encoders):
             adjusted_conditions_outcome = []
             for conditions_outcome_pair in conditions_outcomes_list:
                 conditions, outcome = conditions_outcome_pair
-                adjusted_conditions = adjust_and_decode_conditions(conditions, encoders)
+                adjusted_conditions = adjust_and_decode_conditions2(conditions, encoders)
                 adjusted_conditions_outcome.append((adjusted_conditions, outcome))
             adjusted_rules[gateway_id][flow_id] = adjusted_conditions_outcome
     return adjusted_rules
@@ -304,11 +299,22 @@ def extract_rules(tree, feature_names):
 
 
 def objective(trial, X, y):
+    if X.empty or y.empty or X.shape[0] != y.shape[0]:
+        return 0
 
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+    n_samples = X.shape[0]
+
+    if n_samples < 2:
+        return 0
+
+    test_size = 0.5
+    if n_samples * test_size < 1 or n_samples * (1 - test_size) < 1:
+        return 0
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42)
 
     param = {
-        'max_depth': trial.suggest_int('max_depth', 2, 32),
+        'max_depth': trial.suggest_int('max_depth', 1, 3),
         'min_samples_split': trial.suggest_int('min_samples_split', 2, 16),
         'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 16),
         'ccp_alpha': trial.suggest_float('ccp_alpha', 1e-5, 1e-1, log=True),
@@ -322,13 +328,13 @@ def objective(trial, X, y):
 
 
 @log_time
-def discover_gateway_models(dataframes):
+def discover_gateway_models(dataframes, prefixes):
     gateway_analysis_results = {}
     for gateway_id, df in dataframes.items():
         print(f"Processing Gateway: {gateway_id}")
 
-        feature_columns = [col for col in df.columns if not col.startswith("Flow_")]
-        target_columns = [col for col in df.columns if col.startswith("Flow_")]
+        feature_columns = [col for col in df.columns if not any(col.startswith(prefix) for prefix in prefixes)]
+        target_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes)]
 
         models_results = {}
         for target_col in target_columns:
@@ -352,27 +358,31 @@ def discover_gateway_models(dataframes):
 
 
 @log_time
-def encode_dataframes(dataframes):
+def encode_dataframes(dataframes, prefixes):
     gateway_encoders = {}
 
     for gateway_id, df in dataframes.items():
         encoded_df = df.copy()
         encoders = {}
 
-        target_columns = [col for col in df.columns if col.startswith("Flow_")]
+        target_columns = [col for col in df.columns if any(col.startswith(prefix) for prefix in prefixes)]
 
         for col in df.columns:
-            if col not in target_columns and df[col].dtype == 'object':
-                all_values = pd.concat([pd.Series(['']), df[col]]).unique()
+            if col not in target_columns and (df[col].dtype == 'object' or df[col].dtype == 'bool'):
+                if df[col].dtype == bool:
+                    encoded_df[col] = encoded_df[col].astype(str)
+
+                encoded_df[col] = encoded_df[col].astype(str)
+
+                all_values = pd.concat([pd.Series(['']), encoded_df[col]]).unique()
 
                 encoder = LabelEncoder()
                 encoder.fit(all_values)
-                encoded_df[col] = encoder.transform(df[col])
+                encoded_df[col] = encoder.transform(encoded_df[col])
                 encoders[col] = encoder
 
         dataframes[gateway_id] = encoded_df
         gateway_encoders[gateway_id] = encoders
-
     return dataframes, gateway_encoders
 
 
@@ -397,7 +407,8 @@ def gateways_to_dataframes(gateway_states):
             if flow not in df:
                 df[flow] = False
 
-        df.drop('index', axis=1, inplace=True)
+        if 'index' in df.columns:
+            df.drop('index', axis=1, inplace=True)
         dataframes[gateway_id] = df
 
     return dataframes
@@ -510,6 +521,7 @@ def preprocess_event_log(event_log, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE
 
     log_by_case = scale_data(log_by_case, string_values)
     return log_by_case
+
 
 @log_time
 def sample_event_log_by_case(event_log: pd.DataFrame, log_ids: EventLogIDs, sampling_size: int = DEFAULT_SAMPLING_SIZE):

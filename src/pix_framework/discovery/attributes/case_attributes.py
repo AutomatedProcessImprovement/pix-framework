@@ -1,26 +1,49 @@
+import pprint
+
 from helpers import log_time
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 from sklearn.model_selection import train_test_split
 import numpy as np
 from metrics import calculate_continuous_metrics, calculate_discrete_metrics
+import pandas as pd
 
 
-@log_time
-def discover_case_attributes(e_log, attributes_to_discover, encoders, log_ids, confidence_threshold=1.0):
+def combine_dataframes(dfs):
+    combined_dataframes = {}
+    for attribute, activity_dfs in dfs.items():
+        combined_dataframes[attribute] = pd.concat(activity_dfs.values(), ignore_index=True)
+    return combined_dataframes
+
+
+def check_case_attribute_confidence(df, log_ids):
+    unique_value_counts = df.groupby(log_ids.case)['current'].nunique()
+    total_cases = unique_value_counts.size
+    cases_with_single_value = (unique_value_counts == 1).sum()
+    return cases_with_single_value / total_cases
+
+
+def get_most_frequent_value(series):
+    return series.value_counts().idxmax()
+
+
+# @log_time
+def discover_case_attributes(e_dfs, attributes_to_discover, encoders, log_ids, confidence_threshold=1.0):
     case_attributes = []
     metrics = {}
 
-    e_log_train, e_log_test = train_test_split(e_log, test_size=0.3, random_state=42)
-
+    combined_dfs = combine_dataframes(e_dfs)
     for attribute in attributes_to_discover:
-        if not check_case_attribute_confidence(e_log, attribute, log_ids, confidence_threshold):
+        if check_case_attribute_confidence(combined_dfs[attribute], log_ids) < confidence_threshold:
             continue
 
         is_discrete = attribute in encoders.keys()
-        X_train, X_test = e_log_train[attribute], e_log_test[attribute]
+        df_train, df_test = train_test_split(combined_dfs[attribute], test_size=0.5, random_state=42)
+
+        X_train = df_train.groupby('case_id')['current'].apply(get_most_frequent_value)
+        X_test = df_test.groupby('case_id')['current'].apply(get_most_frequent_value)
 
         if is_discrete:
-            attr, attr_metrics = discover_discrete_attribute(X_train, X_test, attribute, encoders)
+            attr, attr_metrics = discover_discrete_case_attribute(X_train, X_test, encoders[attribute], attribute)
         else:
             attr, attr_metrics = discover_continuous_case_attribute(X_train, X_test, attribute)
 
@@ -30,28 +53,15 @@ def discover_case_attributes(e_log, attributes_to_discover, encoders, log_ids, c
     return case_attributes, metrics
 
 
-def check_case_attribute_confidence(e_log, attribute, log_ids, confidence_threshold):
-    group_counts = e_log.groupby(log_ids.case)[attribute].apply(lambda x: (x == x.iloc[0]).sum())
-    case_lengths = e_log.groupby(log_ids.case).size()
-    confidences = group_counts / case_lengths
-    return confidences.mean() >= confidence_threshold
-
-
-def discover_discrete_attribute(X_train, X_test, attribute, encoders):
-    if attribute in encoders:
-        le = encoders[attribute]
-        X_train_decoded = le.inverse_transform(X_train)
-        X_test_decoded = le.inverse_transform(X_test)
-        unique_values = le.classes_
-    else:
-        X_train_decoded = X_train
-        X_test_decoded = X_test
-        unique_values = np.unique(X_train)
+def discover_discrete_case_attribute(X_train, X_test, encoder, attribute):
+    X_train_decoded = encoder.inverse_transform(X_train)
+    X_test_decoded = encoder.inverse_transform(X_test)
+    unique_values = encoder.classes_
 
     value_probs = [np.mean(X_train_decoded == val) for val in unique_values]
     y_pred = np.random.choice(unique_values, size=len(X_test_decoded), p=value_probs)
 
-    metrics = calculate_discrete_metrics(X_test_decoded, y_pred, unique_values, encoders, attribute)
+    metrics = calculate_discrete_metrics(X_test_decoded, y_pred, unique_values, encoder)
 
     value_distribution_raw = {val: np.mean(X_train_decoded == val) for val in unique_values}
     value_distribution = {key: value for key, value in value_distribution_raw.items() if value > 0}
