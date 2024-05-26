@@ -1,13 +1,14 @@
 import pandas as pd
 from pix_framework.io.event_log import EventLogIDs
 import pprint
-from helpers import subtract_lists, print_results_table, categorize_attributes_and_print_tables
+from helpers import subtract_lists, print_results_table, print_case_results_table
 from preprocessing import preprocess_event_log
-from feature_extraction import extract_features
-from case_attributes import discover_case_attributes
 from ge_continuous_attributes import discover_fixed_global_attributes
 from ge_discrete_attributes import discover_global_and_event_discrete_attributes
 from ge_continuous_attributes import discover_global_and_event_continuous_attributes
+from case_attributes import discover_case_attributes
+import os
+import csv
 from metrics import get_metrics_by_type
 
 import logging
@@ -18,15 +19,11 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DISCRETE_ERROR_RATIO = 0.95
-DEFAULT_SAMPLING_SIZE = 250
-
 
 def discover_attributes(event_log: pd.DataFrame,
                         log_ids: EventLogIDs,
                         avoid_columns: list = [],
-                        confidence_threshold: float = 1.0,
-                        sampling_size: int = DEFAULT_SAMPLING_SIZE):
+                        confidence_threshold: float = 1.0):
     default_avoid_columns = [
         log_ids.case, log_ids.activity, log_ids.start_time,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
@@ -35,91 +32,134 @@ def discover_attributes(event_log: pd.DataFrame,
 
     attributes_to_discover = subtract_lists(event_log.columns, avoid_columns)
 
-    g_dfs, e_dfs, encoders = preprocess_event_log(event_log, avoid_columns, log_ids, sampling_size)
+    g_dfs, e_dfs, encoders = preprocess_event_log(event_log, avoid_columns, log_ids)
 
     # # GLOBAL FIXED ATTRIBUTES
     # global_fixed_attributes = discover_fixed_global_attributes(e_dfs, attributes_to_discover, confidence_threshold, encoders)
     # global_fixed_attribute_names = [attribute['name'] for attribute in global_fixed_attributes]
     # attributes_to_discover = subtract_lists(attributes_to_discover, global_fixed_attribute_names)
 
+    # CASE ATTRIBUTES
+    case_attributes, case_attribute_metrics = discover_case_attributes(e_dfs, attributes_to_discover, encoders, log_ids, confidence_threshold)
+    case_attribute_names = [attribute['name'] for attribute in case_attributes]
+    attributes_to_discover = subtract_lists(attributes_to_discover, case_attribute_names)
 
-
-
-
-
-
-    # # CASE ATTRIBUTES TODO
-    # case_attributes, case_attribute_metrics = discover_case_attributes(e_log, attributes_to_discover, encoders, log_ids, confidence_threshold)
-    # case_attribute_names = [attribute['name'] for attribute in case_attributes]
-    # attributes_to_discover = subtract_lists(attributes_to_discover, case_attribute_names)
-    #
-    # g_log_features = extract_features(g_log, attributes_to_discover, log_ids, is_event_log=False)
-    # e_log_features = extract_features(e_log, attributes_to_discover, log_ids, is_event_log=True)
-
-
-
-
-
-
-
-
-
-
-    # DISCRETE GLOBAL AND EVENT ATTRIBUTES TODO
-    discrete_results = discover_global_and_event_discrete_attributes(g_dfs, e_dfs, encoders)
+    # DISCRETE GLOBAL AND EVENT ATTRIBUTES
+    discrete_results = discover_global_and_event_discrete_attributes(g_dfs, e_dfs, attributes_to_discover, encoders)
     discrete_results = determine_attribute_type_and_best_model(discrete_results, "KS")
     global_discrete_attributes, event_discrete_attributes = format_attribute_results(discrete_results)
 
-    pprint.pprint(event_discrete_attributes)
     discovered_discrete_attribute_names = get_discovered_attribute_names(global_discrete_attributes, event_discrete_attributes)
     attributes_to_discover = subtract_lists(attributes_to_discover, discovered_discrete_attribute_names)
-
-
-
-
-
-
-
-
-
-
 
     # CONTINUOUS GLOBAL AND EVENT ATTRIBUTES
     continuous_results = discover_global_and_event_continuous_attributes(g_dfs, e_dfs, attributes_to_discover)
     continuous_results = determine_attribute_type_and_best_model(continuous_results, "EMD")
     global_continuous_attributes, event_continuous_attributes = format_attribute_results(continuous_results)
-    discovered_continuous_attribute_names = get_discovered_attribute_names(global_continuous_attributes, event_continuous_attributes)
-    attributes_to_discover = subtract_lists(attributes_to_discover, discovered_continuous_attribute_names)
 
+    global_attributes = merge_global_attributes(# global_fixed_attributes,
+                                                global_discrete_attributes,
+                                                global_continuous_attributes)
 
+    event_attributes = merge_event_attributes(event_discrete_attributes,
+                                              event_continuous_attributes)
 
-
-
-
-    # # MERGE ALL ATTRIBUTES
-    # global_attributes = merge_global_attributes(global_fixed_attributes,
-    #                                             global_discrete_attributes,
-    #                                             global_continuous_attributes)
-    #
-    # event_attributes = merge_event_attributes(event_discrete_attributes,
-    #                                           event_continuous_attributes)
-    #
     print_results_table(discrete_results, get_metrics_by_type("discrete"))
     print_results_table(continuous_results, get_metrics_by_type("continuous"))
-    # categorize_attributes_and_print_tables(case_attribute_metrics)
-    #
-    # print("GLOBAL:")
-    # pprint.pprint(global_attributes)
-    # print("CASE:")
-    # pprint.pprint(case_attributes)
-    # print("EVENT:")
-    # pprint.pprint(event_attributes)
-    #
-    # return {
-    #     "global_attributes": global_attributes,
-    #     "case_attributes": case_attributes,
-    #     "event_attributes": event_attributes
-    # }
+    print_case_results_table(case_attribute_metrics)
+
+    # folder = r"D:\_est\PIX_discovery\ICPM"
+    # save_metrics_to_file(discrete_results, get_metrics_by_type("discrete"), folder, "metrics_discrete.csv")
+    # save_metrics_to_file(continuous_results, get_metrics_by_type("continuous"), folder, "metrics_continuous.csv")
+    # save_case_metrics_to_file(case_attribute_metrics, folder, "metrics_case.csv")
+
+    return {
+        "global_attributes": global_attributes,
+        "case_attributes": case_attributes,
+        "event_attributes": event_attributes
+    }
+
+
+
+def save_case_metrics_to_file(model_results, output_dir, file_name='case_metrics.csv'):
+    discrete_metrics = get_metrics_by_type("discrete")
+    continuous_metrics = get_metrics_by_type("continuous")
+
+    discrete_attributes = {}
+    continuous_attributes = {}
+
+    for attr, metrics in model_results.items():
+        if any(metric in discrete_metrics for metric in metrics.keys()):
+            discrete_attributes[attr] = metrics
+        else:
+            continuous_attributes[attr] = metrics
+
+    def save_attributes_to_file(attributes, title, writer):
+        if not attributes:
+            return
+
+        metric_names = list(next(iter(attributes.values())).keys())
+        header = ["Attribute"] + metric_names
+
+        writer.writerow([title + " Case Attributes"])
+        writer.writerow(header)
+
+        for attr, metrics in attributes.items():
+            row_values = [attr] + [metrics.get(metric, float('nan')) for metric in metric_names]
+            writer.writerow(row_values)
+
+    os.makedirs(output_dir, exist_ok=True)
+    csv_path = os.path.join(output_dir, file_name)
+
+    with open(csv_path, mode='a', newline='') as file:
+        writer = csv.writer(file, delimiter=',')
+
+        save_attributes_to_file(discrete_attributes, "Discrete", writer)
+        save_attributes_to_file(continuous_attributes, "Continuous", writer)
+
+    print(f"Case metrics saved to {csv_path}")
+
+
+def save_metrics_to_file(model_results, metric_names, output_dir, file_name='metrics.csv'):
+    metric_labels = []
+    for name in metric_names:
+        metric_labels.extend([f"g_{name}", f"e_{name}", f"g_{name}_avg", f"e_{name}_avg", f"g_{name}_dev", f"e_{name}_dev"])
+
+    os.makedirs(output_dir, exist_ok=True)
+    csv_path = os.path.join(output_dir, file_name)
+
+    file_exists = os.path.isfile(csv_path)
+
+    with open(csv_path, mode='a', newline='') as file:
+        writer = csv.writer(file, delimiter=',')
+
+        if not file_exists:
+            header = ["Attribute", "Model", "Type"] + metric_labels
+            writer.writerow(header)
+
+        for attr, data in model_results.items():
+            models_data = data['models']
+            for model_name, model_data in models_data.items():
+                total_scores = model_data.get('total_scores', {'global': {}, 'event': {}})
+                attr_type = data.get('type', 'Undefined')
+                model_name = model_name.replace(' ', '_')
+                row_values = [attr, model_name, attr_type]
+
+                for metric_name in metric_names:
+                    g_score = total_scores['global'].get(metric_name, float('nan'))
+                    e_score = total_scores['event'].get(metric_name, float('nan'))
+
+                    g_mean = total_scores['global'].get(f'{metric_name}_avg', float('nan'))
+                    e_mean = total_scores['event'].get(f'{metric_name}_avg', float('nan'))
+
+                    g_deviation = total_scores['global'].get(f'{metric_name}_dev', float('nan'))
+                    e_deviation = total_scores['event'].get(f'{metric_name}_dev', float('nan'))
+
+                    row_values.extend([g_score, e_score, g_mean, e_mean, g_deviation, e_deviation])
+
+                writer.writerow(row_values)
+
+    print(f"Metrics saved to {csv_path}")
 
 
 def determine_attribute_type_and_best_model(discovery_results, comparison_metric):
@@ -171,15 +211,13 @@ def format_attribute_results(discovery_results):
 
             global_attribute = {
                 "name": attr_name,
-                "type": attribute_format,
+                "type": 'continuous' if attribute_format in ['continuous', 'expression', 'dtree'] else 'discrete',
                 "values": placeholder_values
             }
             if global_attribute not in global_attributes:
                 global_attributes.append(global_attribute)
 
         for activity_id, activity_data in model_data['activities'].items():
-            # Since we don't use the encoder, activity_id is already the decoded activity name
-            decoded_activity = activity_id
             formula_info = activity_data[attr_type]['formula'] if attr_type in activity_data else None
 
             if formula_info:
@@ -189,66 +227,14 @@ def format_attribute_results(discovery_results):
                     "values": formula_info
                 }
 
-                if decoded_activity not in event_attributes_dict:
-                    event_attributes_dict[decoded_activity] = []
-                event_attributes_dict[decoded_activity].append(event_attribute_entry)
+                if activity_id not in event_attributes_dict:
+                    event_attributes_dict[activity_id] = []
+                event_attributes_dict[activity_id].append(event_attribute_entry)
 
     event_attributes = [{"event_id": event_id, "attributes": attrs} for event_id, attrs in
                         event_attributes_dict.items()]
 
     return global_attributes, event_attributes
-
-# def format_attribute_results(discovery_results, encoder):
-#     global_attributes = []
-#     event_attributes_dict = {}
-#
-#     for attr_name, attr_data in discovery_results.items():
-#         best_model_name = attr_data.get('best_model')
-#         attr_type = attr_data.get('type')
-#         model_data = attr_data['models'][best_model_name]
-#
-#         if best_model_name == 'Linear Regression':
-#             attribute_format = 'expression'
-#         elif best_model_name == 'M5Prime':
-#             attribute_format = 'dtree'
-#         elif best_model_name == 'Curve Fitting':
-#             attribute_format = 'continuous'
-#         else:
-#             attribute_format = 'discrete'
-#
-#         if attr_type == 'global':
-#             placeholder_values = {
-#                 "distribution_name": "fix",
-#                 "distribution_params": [{"value": 0}]} if attribute_format in ['continuous', 'expression', 'dtree'] \
-#                 else [{"key": "", "value": 1}]
-#
-#             global_attribute = {
-#                 "name": attr_name,
-#                 "type": attribute_format,
-#                 "values": placeholder_values
-#             }
-#             if global_attribute not in global_attributes:
-#                 global_attributes.append(global_attribute)
-#
-#         for activity_id, activity_data in model_data['activities'].items():
-#             decoded_activity = encoder.inverse_transform([activity_id])[0]
-#             formula_info = activity_data[attr_type]['formula'] if attr_type in activity_data else None
-#
-#             if formula_info:
-#                 event_attribute_entry = {
-#                     "name": attr_name,
-#                     "type": attribute_format,
-#                     "values": formula_info
-#                 }
-#
-#                 if decoded_activity not in event_attributes_dict:
-#                     event_attributes_dict[decoded_activity] = []
-#                 event_attributes_dict[decoded_activity].append(event_attribute_entry)
-#
-#     event_attributes = [{"event_id": event_id, "attributes": attrs} for event_id, attrs in
-#                         event_attributes_dict.items()]
-#
-#     return global_attributes, event_attributes
 
 
 def get_discovered_attribute_names(global_attrs, event_attrs):

@@ -10,29 +10,32 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def preprocess_event_log(event_log, avoid_columns, log_ids, sampling_size=DEFAULT_SAMPLING_SIZE):
+def preprocess_event_log(event_log, avoid_columns, log_ids):
     sorted_log = event_log.sort_values(by=log_ids.end_time)
     encoders = extract_encoders(event_log, avoid_columns)
 
-    g_log = sample_until_case_end(sorted_log, log_ids, sampling_size)
-    e_log = sample_event_log_by_case(sorted_log, log_ids, sampling_size)
+    # g_log = sample_until_case_end(sorted_log, log_ids, sampling_size)
+    # e_log = sample_event_log_by_case(sorted_log, log_ids, sampling_size)
+
+    g_log = sorted_log.copy()
+    e_log = sorted_log.copy()
 
     g_OBS = process_global_attributes(g_log, avoid_columns, encoders.keys(), log_ids)
     e_OBS = process_event_attributes(e_log, avoid_columns, encoders.keys(), log_ids)
 
-    g_dfs = convert_obs_to_dataframe(g_OBS, encoders)
-    e_dfs = convert_obs_to_dataframe(e_OBS, encoders)
+    g_dfs = convert_obs_to_dataframe(g_OBS, log_ids, encoders)
+    e_dfs = convert_obs_to_dataframe(e_OBS, log_ids, encoders)
 
     g_dfs = scale_dataframes(g_dfs, encoders.keys())
     e_dfs = scale_dataframes(e_dfs, encoders.keys())
 
-    g_dfs = calculate_difference_feature(g_dfs)
-    e_dfs = calculate_difference_feature(e_dfs)
+    g_dfs = calculate_difference(g_dfs)
+    e_dfs = calculate_difference(e_dfs)
 
     return g_dfs, e_dfs, encoders
 
 
-def calculate_difference_feature(dfs):
+def calculate_difference(dfs):
     for attribute, activity_dfs in dfs.items():
         for activity, df in activity_dfs.items():
             df[f'difference'] = df['current'] - df['previous']
@@ -51,10 +54,11 @@ def extract_encoders(event_log, avoid_columns):
     return encoders
 
 
-def convert_obs_to_dataframe(obs, encoders):
+@log_time
+def convert_obs_to_dataframe(obs, log_ids, encoders):
     dict = {}
     for (activity, attribute), changes in obs.items():
-        df = pd.DataFrame(changes, columns=['previous', 'current'])
+        df = pd.DataFrame(changes, columns=['previous', 'current', log_ids.case])
 
         if attribute in encoders:
             encoder = encoders[attribute]
@@ -74,7 +78,7 @@ def is_starting(event):
 def is_completing(event):
     return event['type'] == 'END'
 
-
+@log_time
 def process_global_attributes(event_log, avoid_columns, encoded_columns, log_ids):
     OBS = {}
     T_split = []
@@ -104,12 +108,13 @@ def process_global_attributes(event_log, avoid_columns, encoded_columns, log_ids
 
                 if (activity, attribute) not in OBS:
                     OBS[(activity, attribute)] = []
-                OBS[(activity, attribute)].append((V_init[activity], next_value))
+                OBS[(activity, attribute)].append((V_init[activity], next_value, event[log_ids.case]))
                 V_init[activity] = next_value
 
     return OBS
 
 
+@log_time
 def process_event_attributes(event_log, avoid_columns, encoded_columns, log_ids):
     OBS = {}
     for _, trace in event_log.groupby(log_ids.case):
@@ -139,7 +144,7 @@ def process_event_attributes(event_log, avoid_columns, encoded_columns, log_ids)
                     if (activity, attribute) not in OBS:
                         OBS[(activity, attribute)] = []
 
-                    OBS[(activity, attribute)].append((V_init[activity], next_value))
+                    OBS[(activity, attribute)].append((V_init[activity], next_value, event[log_ids.case]))
                     V_init[activity] = next_value
     return OBS
 

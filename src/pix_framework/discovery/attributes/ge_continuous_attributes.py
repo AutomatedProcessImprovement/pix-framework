@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 from m5py import M5Prime
-from metrics import calculate_continuous_metrics, get_metrics_by_type
+from metrics import calculate_continuous_metrics, get_metrics_by_type, update_model_results
 
 
 @log_time
@@ -29,7 +29,6 @@ def discover_global_and_event_continuous_attributes(g_dfs, e_dfs, attributes_to_
                 update_model_results(attr_results, model_name, attr_type, activity, metrics, formula, metrics_keys)
 
     for attr in attributes_to_discover:
-        print(f"=========================== {attr} (Continuous) ===========================")
         attr_results = {'models': {
             model_name: {
                 'total_scores': {
@@ -42,23 +41,6 @@ def discover_global_and_event_continuous_attributes(g_dfs, e_dfs, attributes_to_
         results[attr] = attr_results
 
     return results
-
-
-def update_model_results(attr_results, model_name, log_type, activity, metrics, formula, metrics_keys):
-    if metrics is None:
-        print(f"No metrics to update for model {model_name}, activity {activity}.")
-        attr_results['models'][model_name]['activities'].setdefault(activity, {})[log_type] = {
-            'metrics': 'No metrics due to model fitting failure',
-            'formula': formula
-        }
-        return
-
-    for key in metrics_keys:
-        attr_results['models'][model_name]['total_scores'][log_type][key] += metrics[key]
-    attr_results['models'][model_name]['activities'].setdefault(activity, {})[log_type] = {
-        'metrics': metrics,
-        'formula': formula
-    }
 
 
 def linear_regression_analysis(df, attribute):
@@ -113,11 +95,10 @@ def curve_fitting_update_rules_analysis(df, attribute):
 
         metrics = calculate_continuous_metrics(test, pred)
 
-        formula = f"{attribute} + {difference_distribution}"
+        formula = f"{attribute} + {difference_distribution.to_simple_function_call()}"
 
         return metrics, formula
     except Exception as e:
-        print(e)
         distribution_info = None
         error_metrics = {metric: float('inf') for metric in calculate_continuous_metrics([0], [0]).keys()}
         return error_metrics, distribution_info
