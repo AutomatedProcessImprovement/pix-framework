@@ -1,7 +1,5 @@
 import time
-import pandas as pd
 from metrics import get_metrics_by_type
-
 
 def log_time(func):
     def wrapper(*args, **kwargs):
@@ -18,26 +16,17 @@ def subtract_lists(main_list, subtract_list):
 
 
 def print_results_table(model_results, metric_names):
-    """
-    Prints a results table for models based on a dynamic set of metrics.
-    The order of metrics in the table will be global metric followed by its corresponding event metric.
+    metric_labels = []
+    for name in metric_names:
+        metric_labels.extend([f"g_{name}", f"e_{name}", f"g_{name}_avg", f"e_{name}_avg", f"g_{name}_dev", f"e_{name}_dev"])
 
-    Parameters:
-    - model_results: Dictionary containing the model results.
-    - metric_names: List of metric names to include in the table.
-    """
-    header_parts = ["{:<25}", "{:<30}", "{:<10}"] + ["{:>15}" + "{:>15}" for _ in metric_names]
-    row_parts = ["{:<25}", "{:<30}", "{:<10}"] + ["{:>15.5e}" + "{:>15.5e}" for _ in metric_names]
+    header_parts = ["{:<25}", "{:<30}", "{:<6}"] + ["{:>20}" for _ in metric_labels]
+    row_parts = ["{:<25}", "{:<30}", "{:<6}"] + ["{:>20.5e}" for _ in metric_labels]
     header_format = " ".join(header_parts)
     row_format = " ".join(row_parts)
 
-    metric_labels = []
-    for name in metric_names:
-        metric_labels.append(f"g_{name}")
-        metric_labels.append(f"e_{name}")
-
-    header = header_format.format("Attribute", "Model", "Type", *metric_labels)
-    print(header)
+    header = ["Attribute", "Model", "Type"] + metric_labels
+    print(header_format.format(*header))
 
     for attr, data in model_results.items():
         models_data = data['models']
@@ -50,12 +39,19 @@ def print_results_table(model_results, metric_names):
             for metric_name in metric_names:
                 g_score = total_scores['global'].get(metric_name, float('nan'))
                 e_score = total_scores['event'].get(metric_name, float('nan'))
-                row_values.extend([g_score, e_score])
+
+                g_mean = total_scores['global'].get(f'{metric_name}_avg', float('nan'))
+                e_mean = total_scores['event'].get(f'{metric_name}_avg', float('nan'))
+
+                g_deviation = total_scores['global'].get(f'{metric_name}_dev', float('nan'))
+                e_deviation = total_scores['event'].get(f'{metric_name}_dev', float('nan'))
+
+                row_values.extend([g_score, e_score, g_mean, e_mean, g_deviation, e_deviation])
 
             print(row_format.format(*row_values))
 
 
-def categorize_attributes_and_print_tables(model_results):
+def print_case_results_table(model_results):
     discrete_metrics = get_metrics_by_type("discrete")
     continuous_metrics = get_metrics_by_type("continuous")
 

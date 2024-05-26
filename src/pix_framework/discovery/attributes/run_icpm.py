@@ -5,7 +5,6 @@ import time
 import os
 import glob
 
-# Defining the log IDs
 PROSIMOS_LOG_IDS = EventLogIDs(
     case="case_id",
     activity="activity",
@@ -36,7 +35,7 @@ def fetch_and_print_attributes(file_name, method, log_ids):
         start_time = time.time()
         event_log = pd.read_csv(file_name)
         results = method(event_log, log_ids=log_ids)
-        end_time = time.time()  # End time
+        end_time = time.time()
         print(f"\n{file_name.split('/')[-1]} execution time: {end_time - start_time:.2f} seconds\n\n\n\n")
 
 
@@ -47,15 +46,17 @@ def discover_and_print_for_files(method, file_paths, log_ids):
 
 
 if __name__ == "__main__":
-    files_to_discover = create_path_list(base_dir)
+    for i in range(1,30):
+        files_to_discover = create_path_list(base_dir)
 
-    # files_to_discover = filter_by_number(files_to_discover, 9)
-    # files_to_discover = filter_by_number(files_to_discover, 10)
+        files_to_discover = filter_by_number(files_to_discover, i)
+        # files_to_discover = filter_by_number(files_to_discover, 10)
 
-    files_to_discover = filter_by_prefix(files_to_discover, 'single_global')
-    # files_to_discover = filter_by_prefix(files_to_discover, 'multiple_global')
-    print(files_to_discover)
-    discover_and_print_for_files(discover_attributes, files_to_discover, PROSIMOS_LOG_IDS)
+        # files_to_discover = filter_by_prefix(files_to_discover, 'single_global')
+        # files_to_discover = filter_by_prefix(files_to_discover, 'multiple_global')
+
+        print(files_to_discover)
+        discover_and_print_for_files(discover_attributes, files_to_discover, PROSIMOS_LOG_IDS)
 
 
 
