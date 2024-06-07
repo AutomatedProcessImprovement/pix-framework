@@ -1,9 +1,7 @@
 import pandas as pd
 from pix_framework.io.event_log import EventLogIDs
-import pprint
 from helpers import subtract_lists, print_results_table, print_case_results_table
 from preprocessing import preprocess_event_log
-from ge_continuous_attributes import discover_fixed_global_attributes
 from ge_discrete_attributes import discover_global_and_event_discrete_attributes
 from ge_continuous_attributes import discover_global_and_event_continuous_attributes
 from case_attributes import discover_case_attributes
@@ -33,11 +31,6 @@ def discover_attributes(event_log: pd.DataFrame,
     attributes_to_discover = subtract_lists(event_log.columns, avoid_columns)
 
     g_dfs, e_dfs, encoders = preprocess_event_log(event_log, avoid_columns, log_ids)
-
-    # # GLOBAL FIXED ATTRIBUTES
-    # global_fixed_attributes = discover_fixed_global_attributes(e_dfs, attributes_to_discover, confidence_threshold, encoders)
-    # global_fixed_attribute_names = [attribute['name'] for attribute in global_fixed_attributes]
-    # attributes_to_discover = subtract_lists(attributes_to_discover, global_fixed_attribute_names)
 
     # CASE ATTRIBUTES
     case_attributes, case_attribute_metrics = discover_case_attributes(e_dfs, attributes_to_discover, encoders, log_ids, confidence_threshold)
