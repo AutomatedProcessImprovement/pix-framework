@@ -1,7 +1,5 @@
-import pandas as pd
 from attribute_discovery import discover_attributes
 from pix_framework.io.event_log import EventLogIDs
-import time
 import os
 import glob
 
@@ -15,7 +13,7 @@ PROSIMOS_LOG_IDS = EventLogIDs(
 )
 
 base_dir = r'D:\_est\PIX_discovery\ICPM\assets\data\out'
-
+bpmn = r'D:\_est\PIX_discovery\ICPM\loan_application.bpmn'
 
 def create_path_list(base_dir):
     pattern = os.path.join(base_dir, '*_*_[0-9]*.csv')
@@ -31,20 +29,6 @@ def filter_by_prefix(path_list, prefix):
     return [path for path in path_list if os.path.basename(path).startswith(prefix)]
 
 
-def fetch_and_print_attributes(file_name, method, log_ids):
-        start_time = time.time()
-        event_log = pd.read_csv(file_name)
-        results = method(event_log, log_ids=log_ids)
-        end_time = time.time()
-        print(f"\n{file_name.split('/')[-1]} execution time: {end_time - start_time:.2f} seconds\n\n\n\n")
-
-
-def discover_and_print_for_files(method, file_paths, log_ids):
-    for file_name in file_paths:
-        print(f"\n\n\n\n\nDISCOVERING {file_name}")
-        fetch_and_print_attributes(file_name, method, log_ids)
-
-
 if __name__ == "__main__":
     for i in range(1,30):
         files_to_discover = create_path_list(base_dir)
@@ -56,7 +40,9 @@ if __name__ == "__main__":
         # files_to_discover = filter_by_prefix(files_to_discover, 'multiple_global')
 
         print(files_to_discover)
-        discover_and_print_for_files(discover_attributes, files_to_discover, PROSIMOS_LOG_IDS)
+        for log in files_to_discover:
+            print(f"\n\n\n\n\nDISCOVERING {log}")
+            discover_attributes(bpmn, log, log_ids=PROSIMOS_LOG_IDS)
 
 
 
