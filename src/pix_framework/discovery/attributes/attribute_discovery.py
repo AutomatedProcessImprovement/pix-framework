@@ -8,6 +8,7 @@ from case_attributes import discover_case_attributes
 import os
 import csv
 from metrics import get_metrics_by_type
+import xml.etree.ElementTree as ET
 
 import logging
 
@@ -17,11 +18,18 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+namespaces = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
 
-def discover_attributes(event_log: pd.DataFrame,
+
+def discover_attributes(bpmn_model_path,
+                        event_log_path,
                         log_ids: EventLogIDs,
                         avoid_columns: list = [],
                         confidence_threshold: float = 1.0):
+    event_log = pd.read_csv(event_log_path)
+    activity_ids = extract_bpmn_activity_ids(bpmn_model_path)
+    event_log = replace_activity_names_with_ids(event_log, log_ids.activity, activity_ids)
+
     default_avoid_columns = [
         log_ids.case, log_ids.activity, log_ids.start_time,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
@@ -269,4 +277,23 @@ def merge_event_attributes(*event_attributes_groups):
 
     merged_event_attributes = [{"event_id": event_id, "attributes": attrs} for event_id, attrs in merged_events_dict.items()]
     return merged_event_attributes
+
+
+def extract_bpmn_activity_ids(bpmn_path):
+    tree = ET.parse(bpmn_path)
+    root = tree.getroot()
+
+    activity_mapping = {}
+
+    for task in root.findall('.//bpmn:task', namespaces):
+        task_id = task.attrib['id']
+        task_name = task.attrib['name']
+        activity_mapping[task_name] = task_id
+
+    return activity_mapping
+
+
+def replace_activity_names_with_ids(log, activity_column, activity_mapping):
+    log[activity_column] = log[activity_column].map(activity_mapping).fillna(log[activity_column])
+    return log
 
