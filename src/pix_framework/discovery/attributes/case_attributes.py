@@ -26,7 +26,7 @@ def get_most_frequent_value(series):
     return series.value_counts().idxmax()
 
 
-# @log_time
+@log_time
 def discover_case_attributes(e_dfs, attributes_to_discover, encoders, log_ids, confidence_threshold=1.0):
     case_attributes = []
     metrics = {}

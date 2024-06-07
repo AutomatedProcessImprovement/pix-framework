@@ -1,4 +1,5 @@
-import pprint
+from m5py.main import LinRegLeafModel
+from sklearn.tree import _tree
 
 from helpers import log_time
 from sklearn.model_selection import train_test_split
@@ -54,8 +55,8 @@ def linear_regression_analysis(df, attribute):
 
         metrics = calculate_continuous_metrics(y_test, y_pred)
 
-        coef_str = " + ".join([f"{coef:.4f}*{attribute}" for i, coef in enumerate(model.coef_)])
-        formula = f"{coef_str} + {model.intercept_:.4f}"
+        coef_str = " + ".join([f"{coef}*{attribute}" for i, coef in enumerate(model.coef_)])
+        formula = f"{coef_str} + {model.intercept_}"
 
         return metrics, formula
     except Exception as e:
@@ -123,7 +124,7 @@ def m5prime_analysis(df, attribute):
 
         metrics = calculate_continuous_metrics(y_test, y_pred)
 
-        formula = model.as_pretty_text()
+        formula = optimize_conditions(m5prime_to_json(model, [attribute]))
 
         return metrics, formula
     except Exception as e:
@@ -132,43 +133,75 @@ def m5prime_analysis(df, attribute):
         return error_metrics, formula
 
 
-@log_time
-def discover_fixed_global_attributes(dfs, attributes_to_discover, confidence_threshold, encoders):
-    global_attributes = []
-    for attribute in attributes_to_discover:
-        if attribute not in dfs:
+def optimize_conditions(rules):
+    optimized_rules = []
+
+    for conditions, formula in rules:
+        if not conditions:
+            optimized_rules.append([True, formula])
             continue
 
-        dfs_activities = dfs[attribute]
+        min_condition = None
+        max_condition = None
 
-        value_counts = {}
-        total_count = 0
-        for activity, df in dfs_activities.items():
-            for value, count in df['current'].value_counts(dropna=False).items():
-                if value in value_counts:
-                    value_counts[value] += count
-                else:
-                    value_counts[value] = count
-                total_count += count
+        for condition in conditions:
+            feature, operator, value = condition.split()
+            value = float(value)
 
-        max_frequency_value = max(value_counts, key=value_counts.get)
-        max_frequency = value_counts[max_frequency_value] / total_count
+            if operator == '<=':
+                if not max_condition or value < max_condition[2]:
+                    max_condition = (feature, operator, value)
+            elif operator == '>':
+                if not min_condition or value > min_condition[2]:
+                    min_condition = (feature, operator, value)
 
-        if max_frequency >= confidence_threshold:
-            if attribute in encoders:
-                decoded_attribute_value = encoders[attribute].inverse_transform([max_frequency_value])[0]
-                global_attributes.append({
-                    "name": attribute,
-                    "type": "discrete",
-                    "values": [{"key": decoded_attribute_value, "value": 1.0}]
-                })
-            else:
-                global_attributes.append({
-                    "name": attribute,
-                    "type": "continuous",
-                    "values": {
-                        "distribution_name": "fix",
-                        "distribution_params": [{"value": max_frequency_value}]
-                    }
-                })
-    return global_attributes
+        optimized_conditions = []
+        if min_condition:
+            optimized_conditions.append(f'{min_condition[0]} {min_condition[1]} {min_condition[2]}')
+        if max_condition:
+            optimized_conditions.append(f'{max_condition[0]} {max_condition[1]} {max_condition[2]}')
+
+        optimized_rules.append([optimized_conditions, formula])
+
+    return optimized_rules
+
+
+def extract_rules(tree, node_models, feature_names, node_id=0, conditions=None):
+    if conditions is None:
+        conditions = []
+    rules = []
+
+    left_child = tree.children_left[node_id]
+    right_child = tree.children_right[node_id]
+
+    if left_child == _tree.TREE_LEAF:
+        leaf_model = node_models[node_id]
+        if isinstance(leaf_model, LinRegLeafModel):
+            coef = leaf_model.model.coef_
+            intercept = leaf_model.model.intercept_
+            formula = ' + '.join([f'{feature_names[i]} * {coef[i]}' for i in range(len(coef))])
+            if not formula:
+                formula = f'{feature_names[0]} * 0.0'
+            formula += f' + {intercept}'
+            rules.append([conditions, formula])
+        else:
+            intercept = tree.value[node_id][0][0]
+            formula = f'{feature_names[0]} * 0.0 + {intercept}'
+            rules.append([conditions, formula])
+    else:
+        # Decision node
+        feature = feature_names[tree.feature[node_id]]
+        threshold = tree.threshold[node_id]
+
+        left_conditions = conditions + [f'{feature} <= {threshold}']
+        right_conditions = conditions + [f'{feature} > {threshold}']
+
+        rules.extend(extract_rules(tree, node_models, feature_names, left_child, left_conditions))
+        rules.extend(extract_rules(tree, node_models, feature_names, right_child, right_conditions))
+
+    return rules
+
+
+def m5prime_to_json(model, feature_names):
+    tree = model.tree_
+    return extract_rules(tree, model.node_models, feature_names)

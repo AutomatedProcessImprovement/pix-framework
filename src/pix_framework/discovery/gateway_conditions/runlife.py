@@ -2,14 +2,13 @@ import pandas as pd
 from gateway_conditions import discover_gateway_conditions
 from pix_framework.io.event_log import EventLogIDs
 import pprint
-import time
 import os
 import json
 import subprocess
 from log_distance_measures.n_gram_distribution import n_gram_distribution_distance
 from log_distance_measures.relative_event_distribution import relative_event_distribution_distance
 from log_distance_measures.cycle_time_distribution import cycle_time_distribution_distance
-from log_distance_measures.config import AbsoluteTimestampType, discretize_to_hour
+from log_distance_measures.config import AbsoluteTimestampType, discretize_to_day
 
 PROSIMOS_PROJECT_DIR = "D:\\_est\\Prosimos\\Prosimos"
 
@@ -52,18 +51,6 @@ def test_discovered_log(original_log_path, simulated_log_path):
     original_log = convert_times(original_log, EXPERIMENTS_LOG_IDS)
     simulated_log = convert_times(simulated_log, PROSIMOS_LOG_IDS)
 
-    one_gram_distance = n_gram_distribution_distance(
-        original_log, EXPERIMENTS_LOG_IDS,
-        simulated_log, PROSIMOS_LOG_IDS,
-        n=1
-    )
-
-    two_gram_distance = n_gram_distribution_distance(
-        original_log, EXPERIMENTS_LOG_IDS,
-        simulated_log, PROSIMOS_LOG_IDS,
-        n=2
-    )
-
     three_gram_distance = n_gram_distribution_distance(
         original_log, EXPERIMENTS_LOG_IDS,
         simulated_log, PROSIMOS_LOG_IDS,
@@ -74,18 +61,16 @@ def test_discovered_log(original_log_path, simulated_log_path):
         original_log, EXPERIMENTS_LOG_IDS,
         simulated_log, PROSIMOS_LOG_IDS,
         discretize_type=AbsoluteTimestampType.BOTH,
-        discretize_event=discretize_to_hour
+        discretize_event=discretize_to_day
     )
 
     cycle_time_distribution = cycle_time_distribution_distance(
         original_log, EXPERIMENTS_LOG_IDS,
         simulated_log, PROSIMOS_LOG_IDS,
-        bin_size=pd.Timedelta(hours=1)
+        bin_size=pd.Timedelta(days=1)
     )
 
     return {
-        "one_gram_distance": one_gram_distance,
-        "two_gram_distance": two_gram_distance,
         "three_gram_distance": three_gram_distance,
         "relative_event_distribution": relative_event_distribution,
         "cycle_time_distribution": cycle_time_distribution,
@@ -196,7 +181,7 @@ if __name__ == "__main__":
         Sepsis,
         Trafic
     ]
-    run_experiments = True  # To run simulations and metric calculation after discovery of the
+    run_experiments = True
 
     for bpmn_path, csv_path in conditions_to_discover:
         main(bpmn_path, csv_path, run_experiments)
