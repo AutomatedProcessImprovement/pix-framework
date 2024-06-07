@@ -3,10 +3,8 @@ import numpy as np
 from pandas.api.types import is_numeric_dtype
 from pix_framework.io.event_log import EventLogIDs
 import time
-import pprint
 from sklearn.tree import _tree
 from sklearn.preprocessing import LabelEncoder
-import xml.etree.ElementTree as ET
 
 from bpmn_parser import parse_simulation_model
 from replayer import Trace, parse_dataframe
