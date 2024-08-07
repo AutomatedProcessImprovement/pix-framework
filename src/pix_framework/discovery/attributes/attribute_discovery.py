@@ -21,15 +21,10 @@ logger = logging.getLogger(__name__)
 namespaces = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
 
 
-def discover_attributes(bpmn_model_path,
-                        event_log_path,
+def discover_attributes(event_log: pd.DataFrame,
                         log_ids: EventLogIDs,
                         avoid_columns: list = [],
                         confidence_threshold: float = 1.0):
-    event_log = pd.read_csv(event_log_path)
-    activity_ids = extract_bpmn_activity_ids(bpmn_model_path)
-    event_log = replace_activity_names_with_ids(event_log, log_ids.activity, activity_ids)
-
     default_avoid_columns = [
         log_ids.case, log_ids.activity, log_ids.start_time,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
@@ -58,67 +53,15 @@ def discover_attributes(bpmn_model_path,
     continuous_results = determine_attribute_type_and_best_model(continuous_results, "EMD")
     global_continuous_attributes, event_continuous_attributes = format_attribute_results(continuous_results)
 
-    global_attributes = merge_global_attributes(# global_fixed_attributes,
-                                                global_discrete_attributes,
-                                                global_continuous_attributes)
+    global_attributes = merge_global_attributes(global_discrete_attributes, global_continuous_attributes)
 
-    event_attributes = merge_event_attributes(event_discrete_attributes,
-                                              event_continuous_attributes)
-
-    print_results_table(discrete_results, get_metrics_by_type("discrete"))
-    print_results_table(continuous_results, get_metrics_by_type("continuous"))
-    print_case_results_table(case_attribute_metrics)
-
-    # folder = r"D:\_est\PIX_discovery\ICPM"
-    # save_metrics_to_file(discrete_results, get_metrics_by_type("discrete"), folder, "metrics_discrete.csv")
-    # save_metrics_to_file(continuous_results, get_metrics_by_type("continuous"), folder, "metrics_continuous.csv")
-    # save_case_metrics_to_file(case_attribute_metrics, folder, "metrics_case.csv")
+    event_attributes = merge_event_attributes(event_discrete_attributes, event_continuous_attributes)
 
     return {
         "global_attributes": global_attributes,
         "case_attributes": case_attributes,
         "event_attributes": event_attributes
     }
-
-
-
-def save_case_metrics_to_file(model_results, output_dir, file_name='case_metrics.csv'):
-    discrete_metrics = get_metrics_by_type("discrete")
-    continuous_metrics = get_metrics_by_type("continuous")
-
-    discrete_attributes = {}
-    continuous_attributes = {}
-
-    for attr, metrics in model_results.items():
-        if any(metric in discrete_metrics for metric in metrics.keys()):
-            discrete_attributes[attr] = metrics
-        else:
-            continuous_attributes[attr] = metrics
-
-    def save_attributes_to_file(attributes, title, writer):
-        if not attributes:
-            return
-
-        metric_names = list(next(iter(attributes.values())).keys())
-        header = ["Attribute"] + metric_names
-
-        writer.writerow([title + " Case Attributes"])
-        writer.writerow(header)
-
-        for attr, metrics in attributes.items():
-            row_values = [attr] + [metrics.get(metric, float('nan')) for metric in metric_names]
-            writer.writerow(row_values)
-
-    os.makedirs(output_dir, exist_ok=True)
-    csv_path = os.path.join(output_dir, file_name)
-
-    with open(csv_path, mode='a', newline='') as file:
-        writer = csv.writer(file, delimiter=',')
-
-        save_attributes_to_file(discrete_attributes, "Discrete", writer)
-        save_attributes_to_file(continuous_attributes, "Continuous", writer)
-
-    print(f"Case metrics saved to {csv_path}")
 
 
 def save_metrics_to_file(model_results, metric_names, output_dir, file_name='metrics.csv'):
@@ -277,23 +220,3 @@ def merge_event_attributes(*event_attributes_groups):
 
     merged_event_attributes = [{"event_id": event_id, "attributes": attrs} for event_id, attrs in merged_events_dict.items()]
     return merged_event_attributes
-
-
-def extract_bpmn_activity_ids(bpmn_path):
-    tree = ET.parse(bpmn_path)
-    root = tree.getroot()
-
-    activity_mapping = {}
-
-    for task in root.findall('.//bpmn:task', namespaces):
-        task_id = task.attrib['id']
-        task_name = task.attrib['name']
-        activity_mapping[task_name] = task_id
-
-    return activity_mapping
-
-
-def replace_activity_names_with_ids(log, activity_column, activity_mapping):
-    log[activity_column] = log[activity_column].map(activity_mapping).fillna(log[activity_column])
-    return log
-
