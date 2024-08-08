@@ -1,10 +1,9 @@
-import pprint
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+from sklearn.preprocessing import LabelEncoder
 
 from helpers import log_time
-from sklearn.preprocessing import LabelEncoder
 
 DEFAULT_SAMPLING_SIZE = 25000
 
@@ -77,6 +76,7 @@ def is_starting(event):
 
 def is_completing(event):
     return event['type'] == 'END'
+
 
 @log_time
 def process_global_attributes(event_log, avoid_columns, encoded_columns, log_ids):

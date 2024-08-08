@@ -1,9 +1,9 @@
-import pprint
-
 import numpy as np
+
 from sklearn.model_selection import train_test_split
-from metrics import get_metrics_by_type, calculate_discrete_metrics, update_model_results
+
 from helpers import log_time
+from metrics import get_metrics_by_type, calculate_discrete_metrics, update_model_results
 
 
 @log_time

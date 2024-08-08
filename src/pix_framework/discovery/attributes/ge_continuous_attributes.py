@@ -1,11 +1,12 @@
+from m5py import M5Prime
 from m5py.main import LinRegLeafModel
 from sklearn.tree import _tree
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+from pix_framework.statistics.distribution import get_best_fitting_distribution
 
 from helpers import log_time
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from pix_framework.statistics.distribution import get_best_fitting_distribution
-from m5py import M5Prime
 from metrics import calculate_continuous_metrics, get_metrics_by_type, update_model_results
 
 
