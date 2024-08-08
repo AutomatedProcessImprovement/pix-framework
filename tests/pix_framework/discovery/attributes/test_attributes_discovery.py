@@ -5,7 +5,7 @@ import logging
 import json
 from scipy import stats
 
-from pix_framework.discovery.attributes.attributes import discover_attributes
+from pix_framework.discovery.attributes.attribute_discovery import discover_attributes
 from pix_framework.io.event_log import EventLogIDs
 from pix_framework.statistics.distribution import DurationDistribution
 
