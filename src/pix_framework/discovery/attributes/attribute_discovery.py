@@ -64,48 +64,6 @@ def discover_attributes(event_log: pd.DataFrame,
     }
 
 
-def save_metrics_to_file(model_results, metric_names, output_dir, file_name='metrics.csv'):
-    metric_labels = []
-    for name in metric_names:
-        metric_labels.extend([f"g_{name}", f"e_{name}", f"g_{name}_avg", f"e_{name}_avg", f"g_{name}_dev", f"e_{name}_dev"])
-
-    os.makedirs(output_dir, exist_ok=True)
-    csv_path = os.path.join(output_dir, file_name)
-
-    file_exists = os.path.isfile(csv_path)
-
-    with open(csv_path, mode='a', newline='') as file:
-        writer = csv.writer(file, delimiter=',')
-
-        if not file_exists:
-            header = ["Attribute", "Model", "Type"] + metric_labels
-            writer.writerow(header)
-
-        for attr, data in model_results.items():
-            models_data = data['models']
-            for model_name, model_data in models_data.items():
-                total_scores = model_data.get('total_scores', {'global': {}, 'event': {}})
-                attr_type = data.get('type', 'Undefined')
-                model_name = model_name.replace(' ', '_')
-                row_values = [attr, model_name, attr_type]
-
-                for metric_name in metric_names:
-                    g_score = total_scores['global'].get(metric_name, float('nan'))
-                    e_score = total_scores['event'].get(metric_name, float('nan'))
-
-                    g_mean = total_scores['global'].get(f'{metric_name}_avg', float('nan'))
-                    e_mean = total_scores['event'].get(f'{metric_name}_avg', float('nan'))
-
-                    g_deviation = total_scores['global'].get(f'{metric_name}_dev', float('nan'))
-                    e_deviation = total_scores['event'].get(f'{metric_name}_dev', float('nan'))
-
-                    row_values.extend([g_score, e_score, g_mean, e_mean, g_deviation, e_deviation])
-
-                writer.writerow(row_values)
-
-    print(f"Metrics saved to {csv_path}")
-
-
 def determine_attribute_type_and_best_model(discovery_results, comparison_metric):
     for attr_name, attr_data in discovery_results.items():
         best_model_name = None
