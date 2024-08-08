@@ -1,14 +1,10 @@
 import pandas as pd
 from pix_framework.io.event_log import EventLogIDs
-from helpers import subtract_lists, print_results_table, print_case_results_table
+from helpers import subtract_lists
 from preprocessing import preprocess_event_log
 from ge_discrete_attributes import discover_global_and_event_discrete_attributes
 from ge_continuous_attributes import discover_global_and_event_continuous_attributes
 from case_attributes import discover_case_attributes
-import os
-import csv
-from metrics import get_metrics_by_type
-import xml.etree.ElementTree as ET
 
 import logging
 
