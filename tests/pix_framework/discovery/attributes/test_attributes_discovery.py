@@ -32,9 +32,9 @@ PROSIMOS_LOG_IDS = EventLogIDs(
     resource="resource",
 )
 
-CASE_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_attributes_log.csv"
-EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/event_attributes_log.csv"
-CASE_AND_EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_and_event_attributes_log.csv"
+CASE_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_attributes_log.csv.gz"
+EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/event_attributes_log.csv.gz"
+CASE_AND_EVENT_ATTRIBUTES_FILE_PATH = "tests/pix_framework/assets/case_and_event_attributes_log.csv.gz"
 
 files_to_discover = [
     CASE_ATTRIBUTES_FILE_PATH,
@@ -178,7 +178,7 @@ expected_values_for_files = {
 
 
 def fetch_attributes_from_file(file_name, size=None, confidence_threshold=1.0):
-    event_log = pd.read_csv(file_name)
+    event_log = pd.read_csv(file_name, compression='gzip')
 
     if size or size != 0:
         subset_cases = event_log.drop_duplicates(subset='case_id').head(size)
