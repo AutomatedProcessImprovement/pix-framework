@@ -4,11 +4,11 @@ import pandas as pd
 
 from pix_framework.io.event_log import EventLogIDs
 
-from helpers import subtract_lists
-from preprocessing import preprocess_event_log
-from case_attributes import discover_case_attributes
-from ge_discrete_attributes import discover_global_and_event_discrete_attributes
-from ge_continuous_attributes import discover_global_and_event_continuous_attributes
+from pix_framework.discovery.attributes.helpers import subtract_lists
+from pix_framework.discovery.attributes.preprocessing import preprocess_event_log
+from pix_framework.discovery.attributes.case_attributes import discover_case_attributes
+from pix_framework.discovery.attributes.ge_discrete_attributes import discover_global_and_event_discrete_attributes
+from pix_framework.discovery.attributes.ge_continuous_attributes import discover_global_and_event_continuous_attributes
 
 
 warnings.filterwarnings("ignore")

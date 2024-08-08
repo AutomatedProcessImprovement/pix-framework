@@ -1,6 +1,6 @@
 import pandas as pd
 
-from helpers import log_time
+from pix_framework.discovery.attributes.helpers import log_time
 
 
 @log_time

@@ -3,8 +3,8 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
-from helpers import log_time
-from metrics import calculate_continuous_metrics, calculate_discrete_metrics
+from pix_framework.discovery.attributes.helpers import log_time
+from pix_framework.discovery.attributes.metrics import calculate_continuous_metrics, calculate_discrete_metrics
 from pix_framework.statistics.distribution import get_best_fitting_distribution
 
 

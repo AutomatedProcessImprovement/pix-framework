@@ -3,7 +3,7 @@ import pandas as pd
 
 from sklearn.preprocessing import LabelEncoder
 
-from helpers import log_time
+from pix_framework.discovery.attributes.helpers import log_time
 
 DEFAULT_SAMPLING_SIZE = 25000
 
