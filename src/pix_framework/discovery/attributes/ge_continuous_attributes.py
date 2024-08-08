@@ -5,9 +5,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
 from pix_framework.statistics.distribution import get_best_fitting_distribution
-
-from helpers import log_time
-from metrics import calculate_continuous_metrics, get_metrics_by_type, update_model_results
+from pix_framework.discovery.attributes.helpers import log_time
+from pix_framework.discovery.attributes.metrics import calculate_continuous_metrics, get_metrics_by_type, update_model_results
 
 
 @log_time

@@ -2,8 +2,8 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-from helpers import log_time
-from metrics import get_metrics_by_type, calculate_discrete_metrics, update_model_results
+from pix_framework.discovery.attributes.helpers import log_time
+from pix_framework.discovery.attributes.metrics import get_metrics_by_type, calculate_discrete_metrics, update_model_results
 
 
 @log_time
