@@ -1,6 +1,7 @@
 import numpy as np
-from sklearn.metrics import mean_squared_error, median_absolute_error
+
 from scipy.stats import wasserstein_distance, ks_2samp
+from sklearn.metrics import mean_squared_error, median_absolute_error
 
 discrete_metrics = [
     'KS',   # KS_Statistic

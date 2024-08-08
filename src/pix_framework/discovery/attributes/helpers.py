@@ -1,5 +1,7 @@
 import time
+
 from metrics import get_metrics_by_type
+
 
 def log_time(func):
     def wrapper(*args, **kwargs):
