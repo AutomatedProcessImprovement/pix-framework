@@ -39,8 +39,8 @@ def discover_case_attributes(e_dfs, attributes_to_discover, encoders, log_ids, c
         is_discrete = attribute in encoders.keys()
         df_train, df_test = train_test_split(combined_dfs[attribute], test_size=0.5, random_state=42)
 
-        X_train = df_train.groupby('case_id')['current'].apply(get_most_frequent_value)
-        X_test = df_test.groupby('case_id')['current'].apply(get_most_frequent_value)
+        X_train = df_train.groupby(log_ids.case)['current'].apply(get_most_frequent_value)
+        X_test = df_test.groupby(log_ids.case)['current'].apply(get_most_frequent_value)
 
         if is_discrete:
             attr, attr_metrics = discover_discrete_case_attribute(X_train, X_test, encoders[attribute], attribute)
