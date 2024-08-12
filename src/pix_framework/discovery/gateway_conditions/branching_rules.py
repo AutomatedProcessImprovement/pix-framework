@@ -6,6 +6,8 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier, _tree
 
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
 
 @log_time
 def discover_xor_gateways(gateway_states, dataframes, prefixes, f_score_threshold):

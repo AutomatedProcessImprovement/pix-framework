@@ -26,6 +26,7 @@ polars = "^0.20.19"
 pyarrow = "^15.0.2"
 lxml = "^4.9.3"
 m5py = "^0.3.3"
+optuna = "^3.6.1"
 
 
 [tool.poetry.group.dev.dependencies]
