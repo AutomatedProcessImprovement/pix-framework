@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from helpers import log_time
+from pix_framework.discovery.gateway_conditions.helpers import log_time
 from pandas.api.types import is_numeric_dtype
 from pix_framework.io.event_log import EventLogIDs
 

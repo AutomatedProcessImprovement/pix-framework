@@ -1,7 +1,7 @@
 import optuna
 import numpy as np
 
-from helpers import log_time
+from pix_framework.discovery.gateway_conditions.helpers import log_time
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier, _tree

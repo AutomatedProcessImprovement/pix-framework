@@ -3,12 +3,12 @@ import warnings
 
 from pix_framework.io.event_log import EventLogIDs
 
-from helpers import log_time
-from replayer import parse_dataframe
-from preprocessing import preprocess_event_log
-from rules_postprocessing import process_rules
-from branching_rules import discover_xor_gateways, discover_or_gateways
-from trace_processing import process_traces, traces_to_dataframes, encode_dataframes
+from pix_framework.discovery.gateway_conditions.helpers import log_time
+from pix_framework.discovery.gateway_conditions.replayer import parse_dataframe
+from pix_framework.discovery.gateway_conditions.preprocessing import preprocess_event_log
+from pix_framework.discovery.gateway_conditions.rules_postprocessing import process_rules
+from pix_framework.discovery.gateway_conditions.branching_rules import discover_xor_gateways, discover_or_gateways
+from pix_framework.discovery.gateway_conditions.trace_processing import process_traces, traces_to_dataframes, encode_dataframes
 
 
 warnings.filterwarnings("ignore")

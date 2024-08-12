@@ -2,10 +2,11 @@ import sys
 import pytz
 import pandas as pd
 
-from helpers import log_time
 from datetime import datetime
-from replayer import Trace, BPMNGraph
 from sklearn.preprocessing import LabelEncoder
+
+from pix_framework.discovery.gateway_conditions.helpers import log_time
+from pix_framework.discovery.gateway_conditions.replayer import Trace, BPMNGraph
 
 
 @log_time
