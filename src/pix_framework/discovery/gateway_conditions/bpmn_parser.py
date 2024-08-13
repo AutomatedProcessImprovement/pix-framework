@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 from enum import Enum
-from discovery.gateway_conditions.replayer import BPMNGraph, BPMN, ElementInfo
+from pix_framework.discovery.gateway_conditions.replayer import BPMNGraph, BPMN, ElementInfo
 
 bpmn_schema_url = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 simod_ns = {"qbp": "http://www.qbp-simulator.com/Schema201212"}
