@@ -23,7 +23,7 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def discover_gateway_conditions(bpmn_model_path,
+def discover_gateway_conditions(bpmn_graph,
                                 event_log,
                                 log_ids: EventLogIDs,
                                 sampling_size: int = DEFAULT_SAMPLING_SIZE,
@@ -35,7 +35,7 @@ def discover_gateway_conditions(bpmn_model_path,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
     ]
 
-    bpmn_graph = parse_simulation_model(bpmn_model_path)
+    # bpmn_graph = parse_simulation_model(bpmn_model_path)
 
     log_by_case = preprocess_event_log(event_log, log_ids, sampling_size)
 
