@@ -14,7 +14,7 @@ from pix_framework.discovery.gateway_conditions.types import BranchRules, Branch
 class PathProbability:
     path_id: str
     probability: float
-    condition_id: str = field(default=None)
+    condition_id: str = None
 
     @staticmethod
     def from_dict(path_probabilities: dict) -> "PathProbability":
@@ -28,11 +28,13 @@ class PathProbability:
         """
         Dictionary compatible with Prosimos.
         """
-        return {
+        data = {
             "path_id": self.path_id,
-            "value": self.probability,
-            "condition_id": self.condition_id
+            "value": self.probability
         }
+        if self.condition_id is not None:
+            data["condition_id"] = self.condition_id
+        return data
 
 
 @dataclass
