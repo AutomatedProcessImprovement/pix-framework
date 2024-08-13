@@ -5,6 +5,7 @@ from pix_framework.io.event_log import EventLogIDs
 
 from pix_framework.discovery.gateway_conditions.helpers import log_time
 from pix_framework.discovery.gateway_conditions.replayer import parse_dataframe
+from pix_framework.discovery.gateway_conditions.bpmn_parser import parse_simulation_model
 from pix_framework.discovery.gateway_conditions.preprocessing import preprocess_event_log
 from pix_framework.discovery.gateway_conditions.rules_postprocessing import process_rules
 from pix_framework.discovery.gateway_conditions.branching_rules import discover_xor_gateways, discover_or_gateways
@@ -22,7 +23,7 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def discover_gateway_conditions(bpmn_graph,
+def discover_gateway_conditions(bpmn_model_path,
                                 event_log,
                                 log_ids: EventLogIDs,
                                 sampling_size: int = DEFAULT_SAMPLING_SIZE,
@@ -33,6 +34,8 @@ def discover_gateway_conditions(bpmn_graph,
         log_ids.case, log_ids.activity, log_ids.start_time,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
     ]
+
+    bpmn_graph = parse_simulation_model(bpmn_model_path)
 
     log_by_case = preprocess_event_log(event_log, log_ids, sampling_size)
 
