@@ -62,15 +62,15 @@ def fill_nans(log, log_ids):
 
 
 @log_time
-def scale_data(log, encoded_columns, threshold=1e+37):
+def scale_data(log, avoid_columns, threshold=1e+37):
     log_scaled = log.copy()
     max_float = np.finfo(np.float32).max
     min_float = np.finfo(np.float32).tiny
 
     for col in log.columns:
-        if col not in encoded_columns and log[col].dtype in ['float64', 'int64']:
-            log_scaled.loc[log_scaled[col] > threshold, col] = max_float
-            log_scaled.loc[log_scaled[col] < -threshold, col] = min_float
+        if col not in avoid_columns and is_numeric_dtype(log[col]):
+            if (log[col] > threshold).any() or (log[col] < -threshold).any():
+                log_scaled.loc[log_scaled[col] > threshold, col] = max_float
+                log_scaled.loc[log_scaled[col] < -threshold, col] = min_float
 
-            log_scaled[col] = log_scaled[col].fillna(method='ffill')
     return log_scaled
