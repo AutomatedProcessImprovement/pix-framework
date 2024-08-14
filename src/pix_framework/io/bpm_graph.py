@@ -309,7 +309,9 @@ class BPMNGraph:
         for flow_id in self.element_info[self.starting_event].outgoing_flows:
             p_state.flow_date[flow_id] = self._c_trace[0].started_at if self._c_trace is not None else None
             p_state.add_token(flow_id)
-        self.update_flow_dates(self.element_info[self.starting_event], p_state, self._c_trace[0].started_at)
+
+        if self._c_trace:
+            self.update_flow_dates(self.element_info[self.starting_event], p_state, self._c_trace[0].started_at)
         pending_tasks = dict()
         for current_index in range(len(task_sequence)):
             el_id = self.from_name.get(task_sequence[current_index])
