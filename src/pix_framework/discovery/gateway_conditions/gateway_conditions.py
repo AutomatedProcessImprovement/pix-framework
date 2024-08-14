@@ -1,16 +1,17 @@
 import logging
 import warnings
 
+import pandas as pd
+
 from pix_framework.io.event_log import EventLogIDs
 
 from pix_framework.discovery.gateway_conditions.helpers import log_time
 from pix_framework.discovery.gateway_conditions.replayer import parse_dataframe
-from pix_framework.discovery.gateway_conditions.bpmn_parser import parse_simulation_model
 from pix_framework.discovery.gateway_conditions.preprocessing import preprocess_event_log
 from pix_framework.discovery.gateway_conditions.rules_postprocessing import process_rules
 from pix_framework.discovery.gateway_conditions.branching_rules import discover_xor_gateways, discover_or_gateways
 from pix_framework.discovery.gateway_conditions.trace_processing import process_traces, traces_to_dataframes, encode_dataframes
-
+from pix_framework.io.bpm_graph import BPMNGraph
 
 warnings.filterwarnings("ignore")
 
@@ -23,8 +24,8 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def discover_gateway_conditions(bpmn_graph,
-                                event_log,
+def discover_gateway_conditions(bpmn_graph: BPMNGraph,
+                                event_log: pd.DataFrame,
                                 log_ids: EventLogIDs,
                                 sampling_size: int = DEFAULT_SAMPLING_SIZE,
                                 f_score_threshold=0.7):
@@ -35,14 +36,11 @@ def discover_gateway_conditions(bpmn_graph,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
     ]
 
-    # bpmn_graph = parse_simulation_model(bpmn_model_path)
-
     log_by_case = preprocess_event_log(event_log, log_ids, sampling_size)
 
     log_traces = parse_dataframe(log_by_case, log_ids, avoid_columns)
 
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
-
     dataframes = traces_to_dataframes(gateway_states)
     dataframes, encoders = encode_dataframes(dataframes, flow_prefixes)
 

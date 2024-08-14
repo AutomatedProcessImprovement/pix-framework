@@ -52,6 +52,7 @@ class ProcessState:
     def __init__(self, bpmn_graph):
         self.arcs_bitset = bpmn_graph.arcs_bitset
         self.tokens = dict()
+        self.flow_date = dict()
         self.state_mask = 0
         for flow_arc in bpmn_graph.flow_arcs:
             self.tokens[flow_arc] = 0
@@ -95,6 +96,10 @@ class BPMNGraph:
         self.closest_distance = None
         self.decision_flows_sortest_path = None
 
+        self._c_trace = None
+        self.gateway_states = dict()
+        self.current_attributes = dict()
+
     @staticmethod
     def from_bpmn_path(model_path: Path):
         bpmn_element_ns = {"xmlns": BPMN_NAMESPACE_URI}
@@ -132,6 +137,18 @@ class BPMNGraph:
         bpmn_graph.encode_or_join_predecessors()
 
         return bpmn_graph
+
+    def capture_gateway_state(self, gateway_id, gateway_type, decision_made, outgoing_flows):
+        if gateway_id not in self.gateway_states:
+            self.gateway_states[gateway_id] = {
+                "type": gateway_type,
+                "decisions": [],
+                "outgoing_flows": outgoing_flows,
+                "attributes": []
+            }
+
+        self.gateway_states[gateway_id]["decisions"].append(decision_made)
+        self.gateway_states[gateway_id]["attributes"].append(self.current_attributes)
 
     def set_element_probabilities(self, element_probability, task_resource_probability):
         self.element_probability = element_probability
@@ -245,6 +262,9 @@ class BPMNGraph:
                 return False
         return False
 
+    def get_gateway_states(self):
+        return self.gateway_states
+
     def update_process_state(self, e_id, p_state):
         if not self._is_enabled(e_id, p_state):
             return []
@@ -279,16 +299,28 @@ class BPMNGraph:
         return enabled_tasks
 
     def replay_trace(
-        self, task_sequence: list, f_arcs_frequency: dict, post_p=True
+        self, task_sequence: list, f_arcs_frequency: dict, post_p=True, trace=None
     ) -> Tuple[bool, List[bool], ProcessState]:
+        self._c_trace = trace
+        task_enabling = list()
         p_state = ProcessState(self)
         fired_tasks = list()
         fired_or_splits = set()
         for flow_id in self.element_info[self.starting_event].outgoing_flows:
+            p_state.flow_date[flow_id] = self._c_trace[0].started_at if self._c_trace is not None else None
             p_state.add_token(flow_id)
+        self.update_flow_dates(self.element_info[self.starting_event], p_state, self._c_trace[0].started_at)
         pending_tasks = dict()
         for current_index in range(len(task_sequence)):
+            el_id = self.from_name.get(task_sequence[current_index])
             fired_tasks.append(False)
+
+            in_flow = self.element_info[el_id].incoming_flows[0]
+            task_enabling.append(p_state.flow_date[in_flow] if in_flow in p_state.flow_date else None)
+            if self._c_trace:
+                self.update_flow_dates(self.element_info[el_id], p_state,
+                                       self._c_trace[current_index].completed_at if self._c_trace is not None else None)
+
             # NOTE: changing self.try_firing to self.try_firing_alternative
             # to avoid no such element in self.from_name error
             self.try_firing_alternative(
@@ -342,10 +374,24 @@ class BPMNGraph:
 
         self.check_unfired_or_splits(fired_or_splits, f_arcs_frequency, p_state)
         if post_p:
-            self.postprocess_unfired_tasks(task_sequence, fired_tasks, f_arcs_frequency)
+            self.postprocess_unfired_tasks(task_sequence, fired_tasks, f_arcs_frequency, task_enabling)
+        self._c_trace = None
         return is_correct, fired_tasks, p_state.pending_tokens()
 
-    def postprocess_unfired_tasks(self, task_sequence: list, fired_tasks: list, f_arcs_frequency: dict):
+    def update_flow_dates(self, e_info: ElementInfo, p_state: ProcessState, last_date):
+        visited_elements = set()
+        suc_queue = deque([e_info])
+        visited_elements.add(e_info.id)
+        while suc_queue:
+            e_info = suc_queue.popleft()
+            for out_flow in e_info.outgoing_flows:
+                next_info = self._get_successor(out_flow)
+                p_state.flow_date[out_flow] = last_date
+                if next_info.is_gateway() and next_info.id not in visited_elements:
+                    suc_queue.append(next_info)
+                    visited_elements.add(next_info.id)
+
+    def postprocess_unfired_tasks(self, task_sequence: list, fired_tasks: list, f_arcs_frequency: dict, task_enablement: list):
         if self.closest_distance is None:
             self._sort_by_closest_predecesors()
         for i in range(0, len(fired_tasks)):
@@ -373,6 +419,8 @@ class BPMNGraph:
                             break
                     j -= 1
                 if fix_from[0] is not None:
+                    if task_enablement[i] is None:
+                        task_enablement[i] = self._c_trace[j].completed_at if j >= 0 else self._c_trace[0].completed_at
                     for flow_id in self.decision_flows_sortest_path[e_info.id][fix_from[0]]:
                         if flow_id not in f_arcs_frequency:
                             f_arcs_frequency[flow_id] = 0
@@ -484,6 +532,7 @@ class BPMNGraph:
         if p_state.has_token(task_info.incoming_flows[0]):
             p_state.remove_token(task_info.incoming_flows[0])
             fired_tasks[task_index] = True
+            self.current_attributes = self._c_trace[task_index].attributes
 
     def closer_enabled_predecessors(
         self,
@@ -646,6 +695,13 @@ class BPMNGraph:
                         path_decisions,
                         f_arcs_frequency,
                     )
+                    if e_info.is_split():
+                        self.capture_gateway_state(
+                            e_info.id,
+                            "XOR",
+                            [e_flow],
+                            e_info.outgoing_flows
+                        )
                 elif e_info.type is BPMNNodeType.INCLUSIVE_GATEWAY:
                     self._update_next(
                         e_flow,
@@ -657,6 +713,8 @@ class BPMNGraph:
                     )
                     if e_info.is_split():
                         fired_or_split.add(e_info.id)
+                        decision_made = [e_flow]
+
                         for flow_id in e_info.outgoing_flows:
                             if flow_id != e_flow:
                                 self._update_next(
@@ -668,6 +726,14 @@ class BPMNGraph:
                                     f_arcs_frequency,
                                     True,
                                 )
+                                decision_made.append(flow_id)
+                        self.capture_gateway_state(
+                            e_info.id,
+                            "OR",
+                            decision_made,
+                            e_info.outgoing_flows
+                        )
+
             for in_flow in e_info.incoming_flows:
                 p_state.remove_token(in_flow)
             self.try_firing_or_join(enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency)
@@ -704,6 +770,7 @@ class BPMNGraph:
         for or_id in or_splits:
             for flow_id in self.element_info[or_id].outgoing_flows:
                 if p_state.tokens[flow_id] > 0:
+                    self.gateway_states[or_id]['decisions'][-1].remove(flow_id)
                     f_arcs_frequency[flow_id] -= p_state.tokens[flow_id]
                     p_state.tokens[flow_id] = 0
 

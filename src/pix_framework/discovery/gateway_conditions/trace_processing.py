@@ -6,8 +6,8 @@ from datetime import datetime
 from sklearn.preprocessing import LabelEncoder
 
 from pix_framework.discovery.gateway_conditions.helpers import log_time
-from pix_framework.discovery.gateway_conditions.replayer import Trace, BPMNGraph
-
+from pix_framework.discovery.gateway_conditions.replayer import Trace
+from pix_framework.io.bpm_graph import BPMNGraph
 
 @log_time
 def traces_to_dataframes(gateway_states):
@@ -138,9 +138,8 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
 
         task_sequence = sort_by_completion_times(trace_info)
 
-        is_correct, fired_tasks, pending_tokens, _, gateway_states = bpmn_graph.replay_trace(
-            task_sequence, flow_arcs_frequency, True, trace_info.event_list
-        )
+        bpmn_graph.replay_trace(task_sequence, flow_arcs_frequency, True, trace_info.event_list)
+        gateway_states = bpmn_graph.get_gateway_states()
 
     return gateway_states
 
