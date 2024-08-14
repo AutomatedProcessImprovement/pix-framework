@@ -421,7 +421,7 @@ class BPMNGraph:
                             break
                     j -= 1
                 if fix_from[0] is not None:
-                    if task_enablement[i] is None:
+                    if task_enablement[i] is None and self._c_trace:
                         task_enablement[i] = self._c_trace[j].completed_at if j >= 0 else self._c_trace[0].completed_at
                     for flow_id in self.decision_flows_sortest_path[e_info.id][fix_from[0]]:
                         if flow_id not in f_arcs_frequency:
