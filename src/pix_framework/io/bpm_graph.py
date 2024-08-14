@@ -534,7 +534,8 @@ class BPMNGraph:
         if p_state.has_token(task_info.incoming_flows[0]):
             p_state.remove_token(task_info.incoming_flows[0])
             fired_tasks[task_index] = True
-            self.current_attributes = self._c_trace[task_index].attributes
+            if self._c_trace:
+                self.current_attributes = self._c_trace[task_index].attributes
 
     def closer_enabled_predecessors(
         self,
