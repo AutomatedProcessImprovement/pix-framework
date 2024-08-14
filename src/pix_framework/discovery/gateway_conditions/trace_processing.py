@@ -138,7 +138,7 @@ def process_traces(log_traces, bpmn_graph, flow_arcs_frequency):
 
         task_sequence = sort_by_completion_times(trace_info)
 
-        is_correct, fired_tasks, pending_tokens, _, gateway_states = bpmn_graph.reply_trace(
+        is_correct, fired_tasks, pending_tokens, _, gateway_states = bpmn_graph.replay_trace(
             task_sequence, flow_arcs_frequency, True, trace_info.event_list
         )
 

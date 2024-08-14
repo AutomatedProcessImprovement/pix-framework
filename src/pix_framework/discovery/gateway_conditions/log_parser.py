@@ -147,7 +147,7 @@ def compute_kpi_times_from_csv_log(log_path, bpmn_graph):
 
     for trace_info in trace_list:
         task_sequence = sort_by_completion_times(trace_info)
-        is_correct, fired_tasks, pending_tokens, enabling_times = bpmn_graph.reply_trace(
+        is_correct, fired_tasks, pending_tokens, enabling_times = bpmn_graph.replay_trace(
             task_sequence, flow_arcs_frequency, True, trace_info.event_list
         )
         for i in range(0, len(enabling_times)):
@@ -418,7 +418,7 @@ def preprocess_xes_log(
 
         task_sequence = sort_by_completion_times(trace_info)
 
-        is_correct, fired_tasks, pending_tokens, _ = bpmn_graph.reply_trace(
+        is_correct, fired_tasks, pending_tokens, _ = bpmn_graph.replay_trace(
             task_sequence, flow_arcs_frequency, True, trace_info.event_list
         )
 

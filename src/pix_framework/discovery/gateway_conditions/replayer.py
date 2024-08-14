@@ -221,7 +221,7 @@ class BPMNGraph:
             fired_tasks[task_index] = True
             self.current_attributes = self._c_trace[task_index].attributes
 
-    def reply_trace(self, task_sequence, f_arcs_frequency, post_p=True, trace=None):
+    def replay_trace(self, task_sequence, f_arcs_frequency, post_p=True, trace=None):
         self._c_trace = trace
         task_enabling = list()
         p_state = ProcessState(self)
