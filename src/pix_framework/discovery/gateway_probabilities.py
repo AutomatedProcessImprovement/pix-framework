@@ -12,19 +12,27 @@ from pix_framework.io.event_log import EventLogIDs
 class PathProbability:
     path_id: str
     probability: float
+    condition_id: str = None
 
     @staticmethod
     def from_dict(path_probabilities: dict) -> "PathProbability":
         return PathProbability(
             path_id=path_probabilities["path_id"],
             probability=path_probabilities["value"],
+            condition_id=path_probabilities.get("condition_id")
         )
 
     def to_dict(self):
         """
         Dictionary compatible with Prosimos.
         """
-        return {"path_id": self.path_id, "value": self.probability}
+        data = {
+            "path_id": self.path_id,
+            "value": self.probability
+        }
+        if self.condition_id is not None:
+            data["condition_id"] = self.condition_id
+        return data
 
 
 @dataclass

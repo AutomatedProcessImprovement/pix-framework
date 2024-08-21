@@ -1,17 +1,10 @@
-import copy
-import pprint
-import random
-import secrets
 import sys
 from collections import deque
 from enum import Enum
-from typing import List
 import csv
 import pandas as pd
 import datetime
 import pytz
-
-from pix_framework.statistics.distribution import DurationDistribution
 
 
 class BPMN(Enum):
@@ -124,24 +117,8 @@ class BPMNGraph:
                 "attributes": []
             }
 
-
         self.gateway_states[gateway_id]["decisions"].append(decision_made)
         self.gateway_states[gateway_id]["attributes"].append(self.current_attributes)
-
-        # print("\tCaptured decisions:")
-        # pprint.pprint(self.gateway_states[gateway_id]['decisions'])
-
-        # for gateway_id, gateway_details in self.gateway_states.items():
-        #     print(f"\n{gateway_id}:")
-        #     outgoing_flows = gateway_details.get("outgoing_flows", [])
-        #     outgoing_flows_str = ", ".join(outgoing_flows)
-        #     print(f"Outgoing Flows: {outgoing_flows_str}")
-        #     attributes_list = gateway_details.get("attributes", [])  # Get the list of attribute sets
-        #     for attribute_set in attributes_list:
-        #         attributes_str = ", ".join([f"{attribute}: {value}" for attribute, value in attribute_set.items()])
-        #         print(f" {attributes_str}")
-        # print("///////////////////////")
-
 
     def fire_enabled_predecessors(self, enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency,
                                   fired_or_split):
@@ -228,7 +205,7 @@ class BPMNGraph:
             fired_tasks[task_index] = True
             self.current_attributes = self._c_trace[task_index].attributes
 
-    def reply_trace(self, task_sequence, f_arcs_frequency, post_p=True, trace=None):
+    def replay_trace(self, task_sequence, f_arcs_frequency, post_p=True, trace=None):
         self._c_trace = trace
         task_enabling = list()
         p_state = ProcessState(self)
@@ -236,9 +213,6 @@ class BPMNGraph:
         fired_or_splits = set()
 
         for flow_id in self.element_info[self.starting_event].outgoing_flows:
-
-            # print(f"CASE STARTED\tCASE STARTED\tCASE STARTED\tCASE STARTED")
-            # print(f_arcs_frequency)
             p_state.flow_date[flow_id] = self._c_trace[0].started_at if self._c_trace is not None else None
             p_state.add_token(flow_id)
         self.update_flow_dates(self.element_info[self.starting_event], p_state, self._c_trace[0].started_at)
@@ -268,9 +242,6 @@ class BPMNGraph:
                 for pending_index in pending_tasks[current_index]:
                     self.try_firing(pending_index, current_index, task_sequence, fired_tasks, pending_tasks,
                                     p_state, f_arcs_frequency, fired_or_splits)
-            # if fired_tasks[current_index] and task_enabling[current_index] is None:
-            #     task_enabling[current_index] = self.fix_missing_flow_enabled_dates(el_id, p_state)
-            # print("\n\n")
 
         # Firing End Event
         # print("CASE ENDED\tCASE ENDED\tCASE ENDED\tCASE ENDED\tCASE ENDED\tCASE ENDED\t\n\n")
@@ -292,7 +263,10 @@ class BPMNGraph:
         if post_p:
             self.postprocess_unfired_tasks(task_sequence, fired_tasks, f_arcs_frequency, task_enabling)
         self._c_trace = None
-        return is_correct, fired_tasks, p_state.pending_tokens(), task_enabling, self.gateway_states
+        return is_correct, fired_tasks, p_state.pending_tokens(), task_enabling
+
+    def get_gateway_states(self):
+        return self.gateway_states
 
     def check_unfired_or_splits(self, or_splits, f_arcs_frequency, p_state):
         # print(f_arcs_frequency)
@@ -682,6 +656,7 @@ def parse_dataframe(df, log_ids, avoid_columns=[]):
 
     return log_traces
 
+
 def parse_csv(log_path, avoid_columns=[]):
     try:
         with open(log_path, mode="r") as csv_file:
@@ -744,6 +719,7 @@ def process_csv_header(first_row):
             raise InvalidLogFileException("%s column missing in the CSV file." % key)
 
     return i_map
+
 
 class CSVTrace:
     def __init__(self, case_id):

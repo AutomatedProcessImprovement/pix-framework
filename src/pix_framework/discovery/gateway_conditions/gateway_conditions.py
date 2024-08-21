@@ -1,21 +1,19 @@
-import optuna
 import logging
 import warnings
+
 import pandas as pd
 
 from pix_framework.io.event_log import EventLogIDs
 
-from helpers import log_time
-from replayer import parse_dataframe
-from bpmn_parser import parse_simulation_model
-from preprocessing import preprocess_event_log
-from rules_postprocessing import process_rules
-from branching_rules import discover_xor_gateways, discover_or_gateways
-from trace_processing import process_traces, traces_to_dataframes, encode_dataframes
-
+from pix_framework.discovery.gateway_conditions.helpers import log_time
+from pix_framework.discovery.gateway_conditions.replayer import parse_dataframe
+from pix_framework.discovery.gateway_conditions.preprocessing import preprocess_event_log
+from pix_framework.discovery.gateway_conditions.rules_postprocessing import process_rules
+from pix_framework.discovery.gateway_conditions.branching_rules import discover_xor_gateways, discover_or_gateways
+from pix_framework.discovery.gateway_conditions.trace_processing import process_traces, traces_to_dataframes, encode_dataframes
+from pix_framework.io.bpm_graph import BPMNGraph
 
 warnings.filterwarnings("ignore")
-optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,8 +24,8 @@ DEFAULT_SAMPLING_SIZE = 25000
 
 
 @log_time
-def discover_gateway_conditions(bpmn_model_path,
-                                event_log_path,
+def discover_gateway_conditions(bpmn_graph: BPMNGraph,
+                                event_log: pd.DataFrame,
                                 log_ids: EventLogIDs,
                                 sampling_size: int = DEFAULT_SAMPLING_SIZE,
                                 f_score_threshold=0.7):
@@ -38,15 +36,11 @@ def discover_gateway_conditions(bpmn_model_path,
         log_ids.end_time, log_ids.resource, log_ids.enabled_time
     ]
 
-    bpmn_graph = parse_simulation_model(bpmn_model_path)
-
-    event_log = pd.read_csv(event_log_path)
     log_by_case = preprocess_event_log(event_log, log_ids, sampling_size)
 
     log_traces = parse_dataframe(log_by_case, log_ids, avoid_columns)
 
     gateway_states = process_traces(log_traces, bpmn_graph, flow_arcs_frequency)
-
     dataframes = traces_to_dataframes(gateway_states)
     dataframes, encoders = encode_dataframes(dataframes, flow_prefixes)
 
@@ -59,15 +53,10 @@ def discover_gateway_conditions(bpmn_model_path,
     xor_rules = format_branch_rules(xor_rules, dataframes, flow_prefixes)
     or_rules = format_branch_rules(or_rules, dataframes, flow_prefixes)
 
-    gateway_probabilities = calculate_gateway_branching_probabilities(gateway_states, flow_arcs_frequency)
-    gateway_probabilities = map_conditions_to_probabilities(gateway_probabilities, xor_rules, or_rules)
-
     branch_rules = xor_rules
     branch_rules.extend(or_rules)
 
-    result = {"gateway_branching_probabilities": gateway_probabilities, "branch_rules": branch_rules}
-
-    return result
+    return branch_rules
 
 
 def format_branch_rules(gateway_analysis_results, dataframes, prefixes):
@@ -113,46 +102,3 @@ def format_branch_rules(gateway_analysis_results, dataframes, prefixes):
 
     return branch_rules
 
-
-@log_time
-def calculate_gateway_branching_probabilities(gateway_states, flow_arcs_frequency):
-    gateway_branching_probabilities = []
-
-    for gateway_id, flows in gateway_states.items():
-        probabilities = []
-        total_executions = sum(flow_arcs_frequency.get(flow_id, 0) for flow_id in flows['outgoing_flows'])
-
-        flow_ids = flows['outgoing_flows']
-        for i, flow_id in enumerate(flow_ids):
-            execution_count = flow_arcs_frequency.get(flow_id, 0)
-            probability = execution_count / total_executions if total_executions > 0 else 0
-
-            adjusted_probability = str(round(probability, 2)) if i < len(flow_ids) - 1 else str(round(1 - sum(float(p['value']) for p in probabilities), 2))
-            prob_entry = {
-                "path_id": flow_id,
-                "value": adjusted_probability
-            }
-
-            probabilities.append(prob_entry)
-
-        gateway_branching_probabilities.append({
-            "gateway_id": gateway_id,
-            "probabilities": probabilities
-        })
-
-    return gateway_branching_probabilities
-
-
-def map_conditions_to_probabilities(gateway_probabilities, xor_conditions, or_conditions):
-    conditions_lookup = {cond['id']: cond for cond in xor_conditions + or_conditions}
-
-    for gateway in gateway_probabilities:
-        probabilities = gateway['probabilities']
-
-        for prob in probabilities:
-            flow_id = prob['path_id']
-
-            if flow_id in conditions_lookup:
-                prob['condition_id'] = flow_id
-
-    return gateway_probabilities
