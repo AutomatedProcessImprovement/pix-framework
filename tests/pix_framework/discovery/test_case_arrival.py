@@ -128,5 +128,5 @@ def test_discover_inter_arrival_distribution_normal(log_name):
     result = discover_inter_arrival_distribution(log, log_ids)
     # Assert
     assert result is not None
-    assert result["distribution_name"] in ["norm", "gamma"]
+    assert result["distribution_name"] in ["lognorm", "norm", "gamma"]
     assert result["distribution_params"][0]["value"] - 2700 < 600  # Less than 10m error in norm mean

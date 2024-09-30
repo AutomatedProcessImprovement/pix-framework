@@ -4,9 +4,9 @@ from concurrent.futures import ProcessPoolExecutor
 import pandas as pd
 import polars as pl
 
-from pix_framework.io.event_log import EventLogIDs
 from pix_framework.enhancement.start_time_estimator.config import Configuration
 from pix_framework.enhancement.start_time_estimator.utils import zip_with_next
+from pix_framework.io.event_log import EventLogIDs
 
 
 class ConcurrencyOracle:
@@ -304,7 +304,7 @@ def _get_overlapping_matrix(event_log: pd.DataFrame, activities: set, config: Co
     # Initialize dictionary for overlapping relations df_count[A][B] = number of times B overlaps with A
     overlapping_relations = {activity: {} for activity in activities}
     # Count overlapping relations
-    for _, trace in event_log_rs.groupby(config.log_ids.case):
+    for _, trace in event_log_rs.group_by(config.log_ids.case):
         # For each event in the trace
         for event in trace.iter_rows(named=True):
             event_start_time = event[config.log_ids.start_time]

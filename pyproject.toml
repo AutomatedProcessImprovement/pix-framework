@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pix-framework"
-version = "0.13.16"
+version = "0.13.17"
 description = "Process Improvement Explorer Framework contains process discovery and improvement modules of the Process Improvement Explorer project."
 authors = [
     "David Chapela de la Campa <david.chapela.delacampa@gmail.com>",
@@ -15,18 +15,18 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
-pandas = "^2.2.1"
-scipy = "^1.10.1"
-pytz = "^2023.3"
+pandas = "^2.2.3"
+scipy = "^1.13.0"
+pytz = "^2024.2"
 networkx = "^3.1"
 wittgenstein = "^0.3.4"
 pandasql = "^0.7.3"
-scikit-learn = "^1.4.2"
-polars = "^0.20.19"
-pyarrow = "^15.0.2"
-lxml = "^4.9.3"
+scikit-learn = "^1.5.2"
+polars = "^1.8.0"
+pyarrow = "^17.0.0"
+lxml = "^5.3.0"
 m5py = "^0.3.3"
-optuna = "^3.6.1"
+optuna = "^4.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
