@@ -773,7 +773,7 @@ class BPMNGraph:
                     flow_arcs_probability,
                     total_frequency,
                 ) = self._calculate_arcs_probabilities(e_id, flow_arcs_frequency)
-                # recalculate not only pure zeros, but also low probabilities
+                # recalculate not only pure zeros, but also low probabilities --- PONER ESTO DE REGRESO
                 if min(flow_arcs_probability.values()) <= 0.005:
                     self._recalculate_arcs_probabilities(flow_arcs_frequency, flow_arcs_probability, total_frequency)
                 self._check_probabilities(flow_arcs_probability)
@@ -806,18 +806,19 @@ class BPMNGraph:
             probability = 1.0 / float(number_of_invalid_arcs)
             for flow_id in flow_arcs_probability:
                 flow_arcs_probability[flow_id] = probability
-        else:  # otherwise, we set min_probability instead of zero and balance probabilities for valid arcs
-            valid_probabilities = arcs_probabilities[arcs_probabilities > valid_probability_threshold].sum()
-            extra_probability = (number_of_invalid_arcs * min_probability) - (1.0 - valid_probabilities)
-            extra_probability_per_valid_arc = extra_probability / number_of_valid_arcs
-            for flow_id in flow_arcs_probability:
-                if flow_arcs_probability[flow_id] <= valid_probability_threshold:
-                    # enforcing the minimum possible probability
-                    probability = min_probability
-                else:
-                    # balancing valid probabilities
-                    probability = flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
-                flow_arcs_probability[flow_id] = probability
+        # FIX THIS CORRECTION BECAUSE IT MAY LEAD TO NEGATIVE PROBABILITIES
+        # else:  # otherwise, we set min_probability instead of zero and balance probabilities for valid arcs
+        #     valid_probabilities = arcs_probabilities[arcs_probabilities > valid_probability_threshold].sum()
+        #     extra_probability = (number_of_invalid_arcs * min_probability) - (1.0 - valid_probabilities)
+        #     extra_probability_per_valid_arc = extra_probability / number_of_valid_arcs
+        #     for flow_id in flow_arcs_probability:
+        #         if flow_arcs_probability[flow_id] <= valid_probability_threshold:
+        #             # enforcing the minimum possible probability
+        #             probability = min_probability
+        #         else:
+        #             # balancing valid probabilities
+        #             probability = flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
+        #         flow_arcs_probability[flow_id] = probability
 
     @staticmethod
     def _check_probabilities(flow_arcs_probability):

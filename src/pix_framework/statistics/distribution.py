@@ -301,7 +301,6 @@ class DurationDistribution:
                 minimum=float(distr_params[2]["value"]),
                 maximum=float(distr_params[3]["value"]),
             )
-
         return distribution
 
     def __str__(self):
@@ -348,8 +347,8 @@ def get_best_fitting_distribution(
         ]
         if mean != 0:
             dist_candidates += [DurationDistribution("lognorm", mean, var, std, d_min, d_max)]
-            if var != 0:
-                dist_candidates += [DurationDistribution("gamma", mean, var, std, d_min, d_max)]
+            # if var != 0:
+            #     dist_candidates += [DurationDistribution("gamma", mean, var, std, d_min, d_max)]
         # Search for the best one within the candidates
         best_distribution = None
         best_emd = sys.float_info.max

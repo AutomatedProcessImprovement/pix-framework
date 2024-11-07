@@ -1,18 +1,24 @@
 from pathlib import Path
 import pandas as pd
 
-from pix_framework.discovery.probabilistic_multitasking.discovery import calculate_multitasking
+from pix_framework.discovery.probabilistic_multitasking.discovery import calculate_multitasking, MultiType
+from pix_framework.discovery.probabilistic_multitasking.model_serialization import extend_prosimos_json
 from pix_framework.io.event_log import DEFAULT_CSV_IDS
 
 assets_dir = Path(__file__).parent.parent / "assets/multitasking"
 
 
-def test_discover_multitasking():
+class BreakAllLoops(Exception):
+    pass
+
+
+def test_discover_global_multitasking():
     # event_log = pd.read_csv(assets_dir / "Application_to_Approval_Government_Agency.csv")
-    probabilities = calculate_multitasking(pd.read_csv(assets_dir / "Application_to_Approval_Government_Agency.csv"))
+    probabilities = calculate_multitasking(pd.read_csv(assets_dir / "sequential.csv"))
 
     valid_p = True
     for resource in probabilities:
+        assert probabilities[resource][1] == 1.0
         for p in probabilities[resource]:
             if p > 1.0:
                 valid_p = False
@@ -21,6 +27,29 @@ def test_discover_multitasking():
             break
 
     assert valid_p
+
+    extend_prosimos_json(assets_dir / "sequential.json", assets_dir / "sequential.json", probabilities, False)
+
+
+def test_discover_local_multitasking():
+    probabilities = calculate_multitasking(pd.read_csv(assets_dir / "sequential.csv"),
+                                           MultiType.LOCAL, 60)
+    valid_p = True
+    try:
+        for resource in probabilities:
+            for wd in probabilities[resource]:
+                for gr_list in probabilities[resource][wd]:
+                    for p in gr_list:
+                        if p > 1.0:
+                            raise BreakAllLoops
+    except BreakAllLoops:
+        assert False
+    assert valid_p
+    extend_prosimos_json(assets_dir / "sequential.json", probabilities, True)
+
+
+
+
 
 
 def _read_event_log(log_path: Path):

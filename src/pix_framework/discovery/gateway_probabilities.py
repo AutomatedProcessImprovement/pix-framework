@@ -123,6 +123,10 @@ def discover_gateway_probabilities(bpmn_graph: BPMNGraph, event_log: pd.DataFram
 
         bpmn_graph.replay_trace(trace, arcs_frequencies)
 
+    for x in arcs_frequencies:
+        if arcs_frequencies[x] < 0:
+            print('hola')
+
     gateway_probabilities = bpmn_graph.discover_gateway_probabilities(arcs_frequencies)
 
     return gateway_probabilities

@@ -118,7 +118,7 @@ class ConcurrencyOracle:
         if include_enabling_activity:
             event_log.loc[indexes, self.log_ids.enabling_activity] = enabling_activities
         event_log.loc[indexes, self.log_ids.enabled_time] = enabled_times
-        event_log[self.log_ids.enabled_time] = pd.to_datetime(event_log[self.log_ids.enabled_time], utc=True)
+        event_log[self.log_ids.enabled_time] = pd.to_datetime(event_log[self.log_ids.enabled_time], utc=True, format='ISO8601')
 
 
 class DeactivatedConcurrencyOracle(ConcurrencyOracle):
