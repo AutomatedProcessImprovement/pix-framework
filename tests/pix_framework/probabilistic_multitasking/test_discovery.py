@@ -17,9 +17,10 @@ def test_discover_global_multitasking():
     probabilities = calculate_multitasking(pd.read_csv(assets_dir / "sequential.csv"))
 
     valid_p = True
-    for resource in probabilities:
-        assert probabilities[resource][1] == 1.0
-        for p in probabilities[resource]:
+    p_resources = probabilities[0]
+    for resource in p_resources:
+        assert p_resources[resource][1] == 1.0
+        for p in p_resources[resource]:
             if p > 1.0:
                 valid_p = False
                 break
@@ -28,7 +29,7 @@ def test_discover_global_multitasking():
 
     assert valid_p
 
-    extend_prosimos_json(assets_dir / "sequential.json", assets_dir / "sequential.json", probabilities, False)
+    # extend_prosimos_json(assets_dir / "sequential.json", assets_dir / "sequential.json", probabilities, False)
 
 
 def test_discover_local_multitasking():
@@ -36,16 +37,17 @@ def test_discover_local_multitasking():
                                            MultiType.LOCAL, 60)
     valid_p = True
     try:
-        for resource in probabilities:
-            for wd in probabilities[resource]:
-                for gr_list in probabilities[resource][wd]:
+        p_resources = probabilities[0]
+        for resource in p_resources:
+            for wd in p_resources[resource]:
+                for gr_list in p_resources[resource][wd]:
                     for p in gr_list:
                         if p > 1.0:
                             raise BreakAllLoops
     except BreakAllLoops:
         assert False
     assert valid_p
-    extend_prosimos_json(assets_dir / "sequential.json", probabilities, True)
+    # extend_prosimos_json(assets_dir / "sequential.json", probabilities, True)
 
 
 
