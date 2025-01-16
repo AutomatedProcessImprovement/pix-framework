@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pix-framework"
-version = "0.13.17"
+version = "0.14.0"
 description = "Process Improvement Explorer Framework contains process discovery and improvement modules of the Process Improvement Explorer project."
 authors = [
     "David Chapela de la Campa <david.chapela.delacampa@gmail.com>",
