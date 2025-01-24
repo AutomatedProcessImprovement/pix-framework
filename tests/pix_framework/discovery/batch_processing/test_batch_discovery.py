@@ -43,7 +43,7 @@ def test__classify_batch_types():
     event_log[DEFAULT_CSV_IDS.enabled_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.enabled_time], utc=True)
     event_log[DEFAULT_CSV_IDS.start_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.start_time], utc=True)
     event_log[DEFAULT_CSV_IDS.end_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.end_time], utc=True)
-    event_log["expected_type"].fillna(pd.NA, inplace=True)
+    event_log["expected_type"] = event_log["expected_type"].fillna(pd.NA)
     # Classify the types of the already identified batches
     _classify_batch_types(event_log, DEFAULT_CSV_IDS)
     assert event_log[DEFAULT_CSV_IDS.batch_type].equals(event_log["expected_type"])

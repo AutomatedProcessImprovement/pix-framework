@@ -95,7 +95,7 @@ def read_csv_log(
         if log_ids.resource not in event_log.columns:
             event_log[log_ids.resource] = missing_resource
         else:
-            event_log[log_ids.resource].fillna(missing_resource, inplace=True)
+            event_log[log_ids.resource] = event_log[log_ids.resource].fillna(missing_resource)
     # Set resource type to string if numeric
     if log_ids.resource in event_log.columns:
         event_log[log_ids.resource] = event_log[log_ids.resource].apply(str)

@@ -138,8 +138,10 @@ class StartTimeEstimator:
             ] = (
                 event_log[self.log_ids.end_time] - statistic_duration
             )
-        # Set remaining non estimated activity instances to instant (those of activities with no estimated time)
-        event_log[self.log_ids.estimated_start_time].fillna(event_log[self.log_ids.end_time], inplace=True)
+        # Set remaining non-estimated activity instances to instant (those of activities with no estimated time)
+        event_log[self.log_ids.estimated_start_time] = event_log[self.log_ids.estimated_start_time].fillna(
+            event_log[self.log_ids.end_time]
+        )
 
     def _get_activity_duration(self, durations):
         if self.config.re_estimation_method == ReEstimationMethod.MODE:
