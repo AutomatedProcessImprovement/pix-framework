@@ -12,7 +12,7 @@ assets_dir = Path(__file__).parent / "assets"
 
 def test__identify_single_activity_batches():
     # Read input event log
-    event_log = pd.read_csv(assets_dir / "event_log_1.csv")
+    event_log = pd.read_csv(assets_dir / "exclusive_gateway_event_log.csv")
     event_log[DEFAULT_CSV_IDS.enabled_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.enabled_time], utc=True)
     event_log[DEFAULT_CSV_IDS.start_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.start_time], utc=True)
     event_log[DEFAULT_CSV_IDS.end_time] = pd.to_datetime(event_log[DEFAULT_CSV_IDS.end_time], utc=True)
