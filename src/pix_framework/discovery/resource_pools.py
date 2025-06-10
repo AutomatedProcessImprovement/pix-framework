@@ -45,7 +45,7 @@ class _ResourcePoolDiscoverer:
         self.roles, self.resource_table = self._discover_roles()
 
     def _filter_log(self, log: pd.DataFrame):
-        filtered_list = log[[self._activity_key, self._resource_key]]
+        filtered_list = log[[self._activity_key, self._resource_key]].copy()
         return filtered_list
 
     def _discover_roles(self):
