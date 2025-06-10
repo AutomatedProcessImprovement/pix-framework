@@ -118,37 +118,52 @@ def read_csv_log(
 
 
 def split_log_training_validation_trace_wise(
-    event_log: pd.DataFrame, log_ids: EventLogIDs, training_percentage: float
+    event_log: pd.DataFrame,
+    log_ids: EventLogIDs,
+    training_percentage: float,
+    sort: bool = True
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split full traces in
-    order to achieve an approximate proportion of [training_percentage] events in the training set.
+    Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split
+    full traces in order to achieve an approximate proportion of [training_percentage] events in the training set.
 
     :param event_log:           event log to split.
     :param log_ids:             IDs for the columns of the event log.
     :param training_percentage: percentage of events (approx) to retain in the training data.
+    :param sort:                if true, sort events in the log by start+end (if start available) or
+                                by end (otherwise).
 
     :return: a tuple with two datasets, the training and the validation ones.
     """
-    # Sort event log
-    sorted_event_log = event_log.sort_values([log_ids.start_time, log_ids.end_time])
-    # Take first trace until the number of events is [training_percentage] * total size
-    total_events = len(event_log)
-    training_case_ids = []
-    training_full = False
-    # Go over the case IDs (sorted by start and end time of its events)
-    for case_id in sorted_event_log[log_ids.case].unique():
-        # The first traces until the size limit is met goes to the training set
-        if not training_full:
-            training_case_ids += [case_id]
-            training_full = len(event_log[event_log[log_ids.case].isin(training_case_ids)]) >= (
-                training_percentage * total_events
-            )
+    # Sort if needed
+    if sort:
+        keys = [log_ids.start_time, log_ids.end_time] if log_ids.start_time in event_log.columns else [log_ids.end_time]
+        sorted_event_log = event_log.sort_values(keys)
+    else:
+        sorted_event_log = event_log
+    # Estimate number of cases for training
+    case_ids = list(sorted_event_log[log_ids.case].unique())
+    num_cases_training = int(training_percentage * len(case_ids))
+    # Retain first estimated cases
+    training_case_ids = case_ids[:num_cases_training]
+    # Loop adjusting until desired % of events
+    well_distributed = False
+    training_log, validation_log = None, None
+    num_cases_history = []  # Store already considered num_cases to not repeat
+    while not well_distributed and num_cases_training not in num_cases_history:
+        num_cases_history += [num_cases_training]
+        # Retain partitions
+        training_log = event_log[event_log[log_ids.case].isin(training_case_ids)]
+        validation_log = event_log[~event_log[log_ids.case].isin(training_case_ids)]
+        # If well distributed, stop, otherwise adjust
+        diff = len(training_log) / len(sorted_event_log) - training_percentage
+        if abs(diff) < 0.01:  # < 1% difference
+            well_distributed = True
+        else:
+            num_cases_training += 1 if diff < 0 else -1
+            training_case_ids = case_ids[:num_cases_training]
     # Return the two splits
-    return (
-        event_log[event_log[log_ids.case].isin(training_case_ids)],
-        event_log[~event_log[log_ids.case].isin(training_case_ids)],
-    )
+    return training_log, validation_log
 
 
 def split_log_training_validation_event_wise(
@@ -159,15 +174,17 @@ def split_log_training_validation_event_wise(
     remove_partial_traces_from_validation: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split event-wise retaining the
-    first [training_percentage] of events in the training set, and the remaining ones in the validation set.
+    Split the traces of [event_log] into two separated event logs (one for training and the other for validation). Split
+    event-wise retaining the first [training_percentage] of events in the training set, and the remaining ones in the
+    validation set.
 
     :param event_log:                               event log to split.
     :param log_ids:                                 IDs for the columns of the event log.
     :param training_percentage:                     percentage of events to retain in the training data.
-    :param sort:                                    if true, sort events in the log by start+end (if start available) or by end (otherwise).
-    :param remove_partial_traces_from_validation    if true, remove from validation set the traces that has been split being some event in
-                                                    training and some events in validation.
+    :param sort:                                    if true, sort events in the log by start+end (if start available) or
+                                                    by end (otherwise).
+    :param remove_partial_traces_from_validation    if true, remove from validation set the traces that has been split
+                                                    being some event in training and some events in validation.
 
     :return: a tuple with two datasets, the training and the validation ones.
     """
@@ -179,7 +196,7 @@ def split_log_training_validation_event_wise(
         sorted_event_log = event_log
     # Get the event splitting train and validation
     num_train_events = int(len(event_log) * training_percentage)
-    last_training_event = sorted_event_log.head(num_train_events).iloc[-1]
+    last_training_event = sorted_event_log.iloc[num_train_events-1]
     # Split the log based on the timestamp of the splitting event
     if log_ids.start_time in event_log.columns:
         training_log = event_log[event_log[log_ids.start_time] <= last_training_event[log_ids.start_time]]

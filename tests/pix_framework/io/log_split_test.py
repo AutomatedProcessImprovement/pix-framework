@@ -95,3 +95,40 @@ def test_split_log_training_validation_trace_wise():
     # Assert expected result
     assert train.equals(data[data["case_id"].isin(["0", "1", "2"])])
     assert test.equals(data[data["case_id"].isin(["3"])])
+
+
+def test_split_log_training_validation_trace_wise_unbalanced():
+    # Create event log mock
+    data = pd.DataFrame(
+        {
+            "case_id": [
+                "0",
+                "0",
+                "0",
+                "1",
+                "0",
+                "1",
+                "2",
+                "3",
+                "1",
+                "2",
+                "3",
+                "2",
+                "3",
+                "3",
+                "2",
+                "3",
+                "3",
+                "3",
+                "3",
+                "3",
+            ],
+            "start_time": [1, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 10],
+            "end_time": [6, 2, 3, 5, 4, 6, 7, 8, 9, 8, 6, 1, 2, 4, 3, 2, 5, 32, 13, 25],
+        }
+    )
+    # Split it in 50-50
+    train, test = split_log_training_validation_trace_wise(data, DEFAULT_CSV_IDS, 0.5)
+    # Assert expected result
+    assert train.equals(data[data["case_id"].isin(["0", "1", "2"])])
+    assert test.equals(data[data["case_id"].isin(["3"])])
