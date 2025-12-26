@@ -8,7 +8,6 @@ assets_dir = Path(__file__).parent.parent / "assets"
 
 
 class CaseExpectedResults:
-    """Class to hold expected test results for a specific case"""
     def __init__(
         self,
         case_id: str,
@@ -54,12 +53,10 @@ class FlowArcAnalysisTester:
             print("-"*80)
 
             flow_arcs_frequency = {}
-            missed_tokens = {}
-            left_tokens = {}
 
             trace = case_events[self.log_ids.activity].tolist()
 
-            is_correct, fired_tasks, pending, frequency_count = self.bpmn_graph.replay_trace(
+            is_correct, fired_tasks, left_tokens, frequency_count, missed_tokens = self.bpmn_graph.replay_trace(
                 trace, flow_arcs_frequency
             )
 
@@ -67,23 +64,23 @@ class FlowArcAnalysisTester:
             print(f"Trace: {trace_str}")
             print(f"Conformance: {'✓ Correct' if is_correct else '✗ Incorrect'}")
             print(f"Fired Tasks: {[i for i, v in enumerate(fired_tasks) if v]} Length: {len(fired_tasks)}")
-            if pending:
-                print(f"Pending Tokens: {pending}")
+            if left_tokens:
+                print(f"Left Tokens: {left_tokens}")
             else:
-                print("Pending Tokens: None")
+                print("Left Tokens: None")
 
-            # left tokens - tokens that "were not consumed"
-            for flow_id in pending:
-                left_tokens[flow_id] = left_tokens.get(flow_id, 0) + 1
+            # # left tokens - tokens that "were not consumed"
+            # for flow_id in pending:
+            #     left_tokens[flow_id] = left_tokens.get(flow_id, 0) + 1
 
-            # missed tokens - missing to be consumed tokens
-            for i, fired in enumerate(fired_tasks):
-                if not fired and i < len(trace):
-                    activity = trace[i]
-                    if activity in self.bpmn_graph.from_name:
-                        task_id = self.bpmn_graph.from_name[activity]
-                        for flow_id in self.bpmn_graph.element_info[task_id].incoming_flows:
-                            missed_tokens[flow_id] = missed_tokens.get(flow_id, 0) + 1
+            # # missed tokens - missing to be consumed tokens
+            # for i, fired in enumerate(fired_tasks):
+            #     if not fired and i < len(trace):
+            #         activity = trace[i]
+            #         if activity in self.bpmn_graph.from_name:
+            #             task_id = self.bpmn_graph.from_name[activity]
+            #             for flow_id in self.bpmn_graph.element_info[task_id].incoming_flows:
+            #                 missed_tokens[flow_id] = missed_tokens.get(flow_id, 0) + 1
 
             self.case_results[str(case_id)] = {
                 'flow_frequencies': frequency_count,
@@ -227,7 +224,7 @@ TEST_CASES = [
                 case_id="2",
                 flow_frequencies={
                     "f1": 1,
-                    "f2": 0,
+                    "f2": 1,
                     "f3": 1,
                     "f4": 0,
                 },
@@ -258,7 +255,7 @@ TEST_CASES = [
                     "f1": 1,
                     "f2": 0,
                     "f3": 0,
-                    "f4": 0,
+                    "f4": 1,
                     "f5": 0,
                     "f6": 1,
                     "f7": 1,
@@ -464,7 +461,7 @@ TEST_CASES = [
     {
         "model_path": assets_dir / "xor_or_gateways.bpmn",
         "log_path": assets_dir / "xor_or_gateways_event_log.csv",
-        "model_name": "Nested OR Gateways Process",
+        "model_name": "XOR OR gateways Process",
         "expected_results": [
             # Case 1: A->B
             CaseExpectedResults(
@@ -477,7 +474,7 @@ TEST_CASES = [
                     "f5": 1,
                     "f6": 1,
                     "f7": 1,
-                    "f8": 1,
+                    "f8": 0,
                     "f9": 1,
                     "f10": 0,
                     "f11": 1,
@@ -517,7 +514,7 @@ TEST_CASES = [
             ),
         ]
     },
-{
+    {
         "model_path": assets_dir / "deep_or_gateways.bpmn",
         "log_path": assets_dir / "deep_or_gateways_event_log.csv",
         "model_name": "Deep Nested OR Gateways Process",
@@ -673,6 +670,503 @@ TEST_CASES = [
                     "f22": 0,
                 }
             ),
+            CaseExpectedResults(
+                case_id="3",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 1,
+                    "f7": 1,
+                    "f8": 0,
+                    "f9": 1,
+                    "f10": 1,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 1,
+                    "f15": 0,
+                    "f16": 1,
+                    "f17": 0,
+                    "f18": 1,
+                    "f19": 1,
+                    "f20": 1,
+                    "f21": 1,
+                    "f22": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                    "f21": 0,
+                    "f22": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                    "f21": 0,
+                    "f22": 0,
+                }
+            ),
+        ]
+    },
+    {
+        "model_path": assets_dir / "deep_or_gateways_2.bpmn",
+        "log_path": assets_dir / "deep_or_gateways_2_event_log.csv",
+        "model_name": "Deep OR gateways 2 Process",
+        "expected_results": [
+            # Case 1: A->B->D
+            CaseExpectedResults(
+                case_id="1",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 1,
+                    "f7": 1,
+                    "f8": 1,
+                    "f9": 1,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 1,
+                    "f18": 1,
+                    "f19": 1,
+                    "f20": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                }
+            ),
+            # CASE: A->C
+            CaseExpectedResults(
+                case_id="2",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 0,
+                    "f7": 1,
+                    "f8": 1,
+                    "f9": 0,
+                    "f10": 1,
+                    "f11": 1,
+                    "f12": 1,
+                    "f13": 1,
+                    "f14": 1,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 1,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                }
+            ),
+        ]
+    },
+    {
+        "model_path": assets_dir / "model_1.bpmn",
+        "log_path": assets_dir / "model_1_event_log.csv",
+        "model_name": "Model with multiple types of split gateways",
+        "expected_results": [
+            # Case 1: A->B->C->D->E
+            CaseExpectedResults(
+                case_id="1",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 1,
+                    "f7": 0,
+                    "f8": 1,
+                    "f9": 1,
+                    "f10": 1,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 1,
+                    "f15": 1,
+                    "f16": 1,
+                    "f17": 1,
+                    "f18": 1,
+                    "f19": 1,
+                    "f20": 1,
+                    "f21": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 1,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                    "f21": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                    "f21": 0,
+                }
+            ),
+            # CASE: A->C->D->E
+            CaseExpectedResults(
+                case_id="2",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 1,
+                    "f7": 0,
+                    "f8": 1,
+                    "f9": 0,
+                    "f10": 1,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 1,
+                    "f19": 1,
+                    "f20": 1,
+                    "f21": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 1,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                    "f17": 0,
+                    "f18": 0,
+                    "f19": 0,
+                    "f20": 0,
+                }
+            ),
+        ]
+    },
+    {
+        "model_path": assets_dir / "model_2.bpmn",
+        "log_path": assets_dir / "model_2_event_log.csv",
+        "model_name": "OR gateways with more than 2 outgoing flow arcs",
+        "expected_results": [
+            # Case 1: A->B->C->D->E
+            CaseExpectedResults(
+                case_id="1",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 1,
+                    "f6": 1,
+                    "f7": 1,
+                    "f8": 1,
+                    "f9": 1,
+                    "f10": 1,
+                    "f11": 1,
+                    "f12": 1,
+                    "f13": 1,
+                    "f14": 1,
+                    "f15": 1,
+                    "f16": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+
+                }
+            ),
+            # CASE: A->E
+            CaseExpectedResults(
+                case_id="2",
+                flow_frequencies={
+                    "f1": 1,
+                    "f2": 1,
+                    "f3": 1,
+                    "f4": 1,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 1,
+                    "f16": 1,
+                },
+                missed_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                },
+                left_tokens={
+                    "f1": 0,
+                    "f2": 0,
+                    "f3": 0,
+                    "f4": 0,
+                    "f5": 0,
+                    "f6": 0,
+                    "f7": 0,
+                    "f8": 0,
+                    "f9": 0,
+                    "f10": 0,
+                    "f11": 0,
+                    "f12": 0,
+                    "f13": 0,
+                    "f14": 0,
+                    "f15": 0,
+                    "f16": 0,
+                }
+            ),
         ]
     },
 ]
@@ -692,76 +1186,68 @@ def test_flow_arc_analysis(test_case):
 
 
 # ===========   PREVIOUS TEST SUITES  ===============
-@pytest.mark.smoke
-@pytest.mark.parametrize("model_path,log_path", [
-    (assets_dir / "deep_or_gateways.bpmn", assets_dir / "deep_or_gateways_event_log.csv")
-])
-def test_flow_arc_analysis_previous(model_path: Path, log_path: Path):
+# @pytest.mark.smoke
+# @pytest.mark.parametrize("model_path,log_path", [
+#     (assets_dir / "furated_related/simple_model.bpmn", assets_dir / "furated_related/simple_model_event_log.csv")
+# ])
+# def test_flow_arc_analysis_single(model_path: Path, log_path: Path):
 
-    selected_case_id = 3
+#     selected_case_id = 1
 
-    bpmn_graph = BPMNGraph.from_bpmn_path(model_path)
-    log_ids = EventLogIDs(case="case_id", activity="activity", end_time="end_time")
-    event_log = read_csv_log(log_path, log_ids)
-    event_log = event_log.sort_values(log_ids.end_time)
+#     bpmn_graph = BPMNGraph.from_bpmn_path(model_path)
+#     log_ids = EventLogIDs(case="case_id", activity="activity", end_time="end_time")
+#     event_log = read_csv_log(log_path, log_ids)
+#     event_log = event_log.sort_values(log_ids.end_time)
 
-    # Filter to only include the selected case ID
-    if selected_case_id is not None:
-        event_log = event_log[event_log[log_ids.case] == selected_case_id]
+#     # Filter to only include the selected case ID
+#     if selected_case_id is not None:
+#         event_log = event_log[event_log[log_ids.case] == selected_case_id]
 
-    flow_arcs_frequency = {}
-    missed_tokens = {}
-    left_tokens = {}
+#     flow_arcs_frequency = {}
+#     # left_tokens = {}
 
-    for case_id, case_events in event_log.groupby(log_ids.case):
-        trace = case_events[log_ids.activity].tolist()
-        is_correct, fired_tasks, pending, frequency_count = bpmn_graph.replay_trace(trace, flow_arcs_frequency)
+#     for case_id, case_events in event_log.groupby(log_ids.case):
+#         task_sequence = case_events[log_ids.activity].tolist()
+#         is_correct, fired_tasks, left_tokens, frequency_count, missed_tokens = bpmn_graph.replay_trace(task_sequence, flow_arcs_frequency)
 
-        print(f"\nIsCorrect: {is_correct}, FiredTasks: {fired_tasks}, Pending: {pending}")
-        print(f"BPMN flow arcs: {bpmn_graph.flow_arcs}")
+#         # print(f"\nIsCorrect: {is_correct}, FiredTasks: {fired_tasks}, Pending: {pending}")
+#         print(f"BPMN flow arcs: {bpmn_graph.flow_arcs}")
 
-        #left tokens - "were not consumed"
-        for flow_id in pending:
-            left_tokens[flow_id] = left_tokens.get(flow_id, 0) + 1
-
-        #missed tokens - "were not there when needed"
-        for i, fired in enumerate(fired_tasks):
-            if not fired and i < len(trace):
-                activity = trace[i]
-                if activity in bpmn_graph.from_name:
-                    task_id = bpmn_graph.from_name[activity]
-                    for flow_id in bpmn_graph.element_info[task_id].incoming_flows:
-                        missed_tokens[flow_id] = missed_tokens.get(flow_id, 0) + 1
-
-    def numeric_sort_key(flow_id):
-        if flow_id.startswith("f") and flow_id[1:].isdigit():
-            return int(flow_id[1:])
-        return flow_id
-
-    sorted_flow_ids = sorted(bpmn_graph.flow_arcs.keys(), key=numeric_sort_key)
-
-    print(f"\nFlow Arc Analysis: ")
-    for flow_id in sorted_flow_ids:
-        source = bpmn_graph.element_info[bpmn_graph.flow_arcs[flow_id][0]].name
-        target = bpmn_graph.element_info[bpmn_graph.flow_arcs[flow_id][1]].name
-        print(f"\nFlow {flow_id} ({source} -> {target}):")
-        print(f"  Frequency: {frequency_count.get(flow_id, 0)}")
-        print(f"  Missed tokens: {missed_tokens.get(flow_id, 0)}")
-        print(f"  Left tokens: {left_tokens.get(flow_id, 0)}")
-
-    # Assertions
-    assert bpmn_graph is not None
+#         #left tokens - "were not consumed"
+#         # print()
+#         # for flow_id in pending:
+#         #     left_tokens[flow_id] = left_tokens.get(flow_id, 0) + 1
 
 
-    for flow_id in bpmn_graph.flow_arcs:
-        # assert flow_id in flow_arcs_frequency, f"Flow arc {flow_id} not found in frequency dictionary"
-        # assert isinstance(flow_arcs_frequency[flow_id], int), f"Invalid frequency type for flow {flow_id}"
+#     def numeric_sort_key(flow_id):
+#         if flow_id.startswith("f") and flow_id[1:].isdigit():
+#             return int(flow_id[1:])
+#         return flow_id
 
-        if flow_id in missed_tokens:
-            assert isinstance(missed_tokens[flow_id], int), f"Invalid missed tokens type for flow {flow_id}"
+#     sorted_flow_ids = sorted(bpmn_graph.flow_arcs.keys(), key=numeric_sort_key)
 
-        if flow_id in left_tokens:
-            assert isinstance(left_tokens[flow_id], int), f"Invalid left tokens type for flow {flow_id}"
+#     print(f"\nFlow Arc Analysis: ")
+#     for flow_id in sorted_flow_ids:
+#         source = bpmn_graph.element_info[bpmn_graph.flow_arcs[flow_id][0]].name
+#         target = bpmn_graph.element_info[bpmn_graph.flow_arcs[flow_id][1]].name
+#         print(f"\nFlow {flow_id} ({source} -> {target}):")
+#         print(f"  Frequency: {frequency_count.get(flow_id, 0)}")
+#         print(f"  Missed tokens: {missed_tokens.get(flow_id, 0)}")
+#         print(f"  Left tokens: {left_tokens.get(flow_id, 0)}")
+
+#     # Assertions
+#     assert bpmn_graph is not None
+
+
+#     for flow_id in bpmn_graph.flow_arcs:
+#         # assert flow_id in flow_arcs_frequency, f"Flow arc {flow_id} not found in frequency dictionary"
+#         # assert isinstance(flow_arcs_frequency[flow_id], int), f"Invalid frequency type for flow {flow_id}"
+
+#         if flow_id in missed_tokens:
+#             assert isinstance(missed_tokens[flow_id], int), f"Invalid missed tokens type for flow {flow_id}"
+
+#         if flow_id in left_tokens:
+#             assert isinstance(left_tokens[flow_id], int), f"Invalid left tokens type for flow {flow_id}"
 
 
 
