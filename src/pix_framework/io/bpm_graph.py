@@ -54,13 +54,28 @@ class ProcessState:
         self.tokens = dict()
         self.flow_date = dict()
         self.state_mask = 0
+        self.frequency_count = dict()
+        self.visited_flow_arcs = set()
         for flow_arc in bpmn_graph.flow_arcs:
             self.tokens[flow_arc] = 0
+
+    def increment_frequency(self, flow_id):
+        if flow_id in self.tokens and self.tokens[flow_id] > 1:
+            return
+        if flow_id in self.visited_flow_arcs:
+            return
+        else:
+            self.visited_flow_arcs.add(flow_id)
+        if flow_id in self.frequency_count:
+            self.frequency_count[flow_id] += 1
+        else:
+            self.frequency_count[flow_id] = 1
 
     def add_token(self, flow_id):
         if flow_id in self.tokens:
             self.tokens[flow_id] += 1
             self.state_mask |= self.arcs_bitset[flow_id]
+            self.increment_frequency(flow_id)
 
     def remove_token(self, flow_id):
         if self.has_token(flow_id):
@@ -76,6 +91,15 @@ class ProcessState:
             if self.tokens[flow_id] > 0:
                 marked_flows.append(flow_id)
         return marked_flows
+
+    def pending_tokens_dict(self):
+        left_tokens = {}
+        for flow_id in self.tokens:
+            if self.tokens[flow_id] > 0:
+                left_tokens[flow_id] = self.tokens[flow_id]
+            else:
+                left_tokens[flow_id] = 0
+        return left_tokens
 
 
 class BPMNGraph:
@@ -298,6 +322,23 @@ class BPMNGraph:
             random.shuffle(enabled_tasks)
         return enabled_tasks
 
+    def remove_from_enabled(self, enabled_elements: deque, fired_or_splits: set) -> deque:
+        """
+        Remove TASK elements and elements in fired_or_splits from the enabled elements deque.
+
+        Args:
+            enabled_elements: A deque containing [ElementInfo, flow_id] pairs
+            fired_or_splits: A set of element IDs to be removed
+
+        Returns:
+            A new deque with filtered elements
+        """
+        return deque(
+            [elem for elem in enabled_elements
+             if elem[0].type is not BPMNNodeType.TASK and elem[0].id not in fired_or_splits]
+        )
+
+
     def replay_trace(
         self, task_sequence: list, f_arcs_frequency: dict, post_p=True, trace=None
     ) -> Tuple[bool, List[bool], ProcessState]:
@@ -306,6 +347,8 @@ class BPMNGraph:
         p_state = ProcessState(self)
         fired_tasks = list()
         fired_or_splits = set()
+        missed_tokens = dict()
+
         for flow_id in self.element_info[self.starting_event].outgoing_flows:
             p_state.flow_date[flow_id] = self._c_trace[0].started_at if self._c_trace is not None else None
             p_state.add_token(flow_id)
@@ -313,6 +356,7 @@ class BPMNGraph:
         if self._c_trace:
             self.update_flow_dates(self.element_info[self.starting_event], p_state, self._c_trace[0].started_at)
         pending_tasks = dict()
+
         for current_index in range(len(task_sequence)):
             el_id = self.from_name.get(task_sequence[current_index])
             fired_tasks.append(False)
@@ -338,7 +382,11 @@ class BPMNGraph:
             el_id = self.from_name.get(task_sequence[current_index])
             if el_id is None:  # NOTE: skipping if no such element in self.from_name
                 continue
-            p_state.add_token(self.element_info[el_id].outgoing_flows[0])
+
+            outgoing_flow = self.element_info[el_id].outgoing_flows[0]
+            p_state.add_token(outgoing_flow)
+
+
             if current_index in pending_tasks:
                 for pending_index in pending_tasks[current_index]:
                     self.try_firing_alternative(
@@ -352,10 +400,24 @@ class BPMNGraph:
                         fired_or_splits,
                     )
 
+        for or_id in fired_or_splits:
+            or_info = self.element_info[or_id]
+            for flow_id in or_info.outgoing_flows:
+
+                target_id = self.flow_arcs[flow_id][1]
+                target_info = self.element_info[target_id]
+
+                if target_info.type == BPMNNodeType.TASK:
+                    if target_info.name not in task_sequence:
+                        if flow_id in p_state.frequency_count:
+                            p_state.frequency_count[flow_id] = 0
+
         # Firing End Event
         enabled_end, or_fired, path_decisions = self._find_enabled_predecessors(
             self.element_info[self.end_event], p_state
         )
+        enabled_end = self.remove_from_enabled(enabled_end, fired_or_splits)
+
         self._fire_enabled_predecessors(
             enabled_end,
             p_state,
@@ -366,6 +428,10 @@ class BPMNGraph:
         )
         end_flow = self.element_info[self.end_event].incoming_flows[0]
         if p_state.has_token(end_flow):
+            if end_flow not in f_arcs_frequency:
+                f_arcs_frequency[end_flow] = 1
+            else:
+                f_arcs_frequency[end_flow] += 1
             p_state.tokens[end_flow] = 0
 
         is_correct = True
@@ -378,7 +444,17 @@ class BPMNGraph:
         if post_p:
             self.postprocess_unfired_tasks(task_sequence, fired_tasks, f_arcs_frequency, task_enabling)
         self._c_trace = None
-        return is_correct, fired_tasks, p_state.pending_tokens()
+
+        for i, fired in enumerate(fired_tasks):
+            if not fired and i < len(task_sequence):
+                activity = task_sequence[i]
+                if activity in self.from_name:
+                    task_id =  self.from_name[activity]
+                    for flow_id in self.element_info[task_id].incoming_flows:
+                        missed_tokens[flow_id] = missed_tokens.get(flow_id, 0) + 1
+                        p_state.increment_frequency(flow_id)
+
+        return is_correct, fired_tasks, p_state.pending_tokens_dict(), p_state.frequency_count, missed_tokens
 
     def update_flow_dates(self, e_info: ElementInfo, p_state: ProcessState, last_date):
         visited_elements = set()
@@ -517,6 +593,8 @@ class BPMNGraph:
         task_info = self.element_info[el_id]
         if not p_state.has_token(task_info.incoming_flows[0]):
             enabled_pred, or_fired, path_decisions = self._find_enabled_predecessors(task_info, p_state)
+            enabled_pred = self.remove_from_enabled(enabled_pred, fired_or_splits) # TO BE considered: might have implications to certain cases
+
             firing_index = self.find_firing_index(task_index, from_index, task_sequence, path_decisions, enabled_pred)
             if firing_index == from_index:
                 self._fire_enabled_predecessors(
@@ -532,7 +610,8 @@ class BPMNGraph:
             else:
                 pending_tasks[firing_index].append(task_index)
         if p_state.has_token(task_info.incoming_flows[0]):
-            p_state.remove_token(task_info.incoming_flows[0])
+            flow_id = task_info.incoming_flows[0]
+            p_state.remove_token(flow_id)
             fired_tasks[task_index] = True
             if self._c_trace:
                 self.current_attributes = self._c_trace[task_index].attributes
@@ -552,7 +631,9 @@ class BPMNGraph:
         if self._is_enabled(e_info.id, p_state):
             if dist not in enabled_pred:
                 enabled_pred[dist] = list()
+
             enabled_pred[dist].append([e_info, flow_id])
+            visited.add(e_info.id)
             min_dist[0] = max(min_dist[0], dist)
             return dist, enabled_pred, or_firing, path_split
         elif e_info.type is BPMNNodeType.INCLUSIVE_GATEWAY and e_info.is_join():
@@ -679,6 +760,10 @@ class BPMNGraph:
             [e_info, e_flow] = enabled_pred.popleft()
             if self._is_enabled(e_info.id, p_state):
                 visited_elements.add(e_info.id)
+
+                for in_flow in e_info.incoming_flows:
+                    p_state.remove_token(in_flow)
+
                 if e_info.type is BPMNNodeType.PARALLEL_GATEWAY:
                     for out_flow in e_info.outgoing_flows:
                         self._update_next(
@@ -706,6 +791,9 @@ class BPMNGraph:
                             e_info.outgoing_flows
                         )
                 elif e_info.type is BPMNNodeType.INCLUSIVE_GATEWAY:
+                    if e_info.is_split() and e_info.id in fired_or_split:
+                        continue
+
                     self._update_next(
                         e_flow,
                         enabled_pred,
@@ -737,37 +825,52 @@ class BPMNGraph:
                             e_info.outgoing_flows
                         )
 
-            for in_flow in e_info.incoming_flows:
-                p_state.remove_token(in_flow)
             self.try_firing_or_join(enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency)
+            p_state.visited_flow_arcs.clear()
+
 
     def try_firing_or_join(self, enabled_pred, p_state, or_firing, path_decisions, f_arcs_frequency):
-        fired = set()
-        or_firing_list = list()
-        for or_join_id in or_firing:
-            or_firing_list.append(or_join_id)
-        for or_join_id in or_firing_list:
-            if self._is_enabled(or_join_id, p_state) or not enabled_pred:
-                fired.add(or_join_id)
-                e_info = self.element_info[or_join_id]
-                self._update_next(
-                    e_info.outgoing_flows[0],
-                    enabled_pred,
-                    p_state,
-                    or_firing,
-                    path_decisions,
-                    f_arcs_frequency,
-                )
-                for in_flow in e_info.incoming_flows:
-                    p_state.remove_token(in_flow)
-                if enabled_pred:
-                    break
-                if len(or_firing_list) != len(or_firing):
-                    for e_id in or_firing:
-                        if e_id not in or_firing_list:
-                            or_firing_list.append(e_id)
-        for or_id in fired:
-            del or_firing[or_id]
+        or_join_fired = True
+        while or_join_fired and (or_firing or enabled_pred):
+            or_join_fired = False
+            fired = set()
+            fired_flows = set()
+            or_firing_list = list(or_firing.keys())
+
+            for or_join_id in or_firing_list:
+                if self._is_enabled(or_join_id, p_state) or not enabled_pred:
+                    or_join_fired = True
+                    fired.add(or_join_id)
+                    e_info = self.element_info[or_join_id]
+
+                    if e_info.outgoing_flows[0] in fired_flows:
+                        p_state.increment_frequency(e_info.outgoing_flows[0])
+                    else:
+                        self._update_next(
+                            e_info.outgoing_flows[0],
+                            enabled_pred,
+                            p_state,
+                            or_firing,
+                            path_decisions,
+                            f_arcs_frequency,
+                        )
+
+                    for in_flow in e_info.incoming_flows:
+                        fired_flows.add(in_flow)
+                        p_state.remove_token(in_flow)
+
+                    if enabled_pred:
+                        break
+
+                    if len(or_firing_list) != len(or_firing):
+                        for e_id in or_firing:
+                            if e_id not in or_firing_list:
+                                or_firing_list.append(e_id)
+
+            for or_id in fired:
+                if or_id in or_firing:
+                    del or_firing[or_id]
+
 
     def check_unfired_or_splits(self, or_splits, f_arcs_frequency, p_state):
         for or_id in or_splits:
@@ -843,7 +946,7 @@ class BPMNGraph:
                     flow_arcs_probability,
                     total_frequency,
                 ) = self._calculate_arcs_probabilities(e_id, flow_arcs_frequency)
-                # recalculate not only pure zeros, but also low probabilities --- PONER ESTO DE REGRESO
+                # recalculate not only pure zeros, but also low probabilities
                 if min(flow_arcs_probability.values()) <= 0.005:
                     self._recalculate_arcs_probabilities(flow_arcs_frequency, flow_arcs_probability, total_frequency)
                 self._check_probabilities(flow_arcs_probability)
@@ -876,19 +979,18 @@ class BPMNGraph:
             probability = 1.0 / float(number_of_invalid_arcs)
             for flow_id in flow_arcs_probability:
                 flow_arcs_probability[flow_id] = probability
-        # FIX THIS CORRECTION BECAUSE IT MAY LEAD TO NEGATIVE PROBABILITIES
-        # else:  # otherwise, we set min_probability instead of zero and balance probabilities for valid arcs
-        #     valid_probabilities = arcs_probabilities[arcs_probabilities > valid_probability_threshold].sum()
-        #     extra_probability = (number_of_invalid_arcs * min_probability) - (1.0 - valid_probabilities)
-        #     extra_probability_per_valid_arc = extra_probability / number_of_valid_arcs
-        #     for flow_id in flow_arcs_probability:
-        #         if flow_arcs_probability[flow_id] <= valid_probability_threshold:
-        #             # enforcing the minimum possible probability
-        #             probability = min_probability
-        #         else:
-        #             # balancing valid probabilities
-        #             probability = flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
-        #         flow_arcs_probability[flow_id] = probability
+        else:  # otherwise, we set min_probability instead of zero and balance probabilities for valid arcs
+            valid_probabilities = arcs_probabilities[arcs_probabilities > valid_probability_threshold].sum()
+            extra_probability = (number_of_invalid_arcs * min_probability) - (1.0 - valid_probabilities)
+            extra_probability_per_valid_arc = extra_probability / number_of_valid_arcs
+            for flow_id in flow_arcs_probability:
+                if flow_arcs_probability[flow_id] <= valid_probability_threshold:
+                    # enforcing the minimum possible probability
+                    probability = min_probability
+                else:
+                    # balancing valid probabilities
+                    probability = flow_arcs_probability[flow_id] - extra_probability_per_valid_arc
+                flow_arcs_probability[flow_id] = probability
 
     @staticmethod
     def _check_probabilities(flow_arcs_probability):
