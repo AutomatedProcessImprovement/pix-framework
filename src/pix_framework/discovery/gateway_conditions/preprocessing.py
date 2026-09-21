@@ -56,7 +56,7 @@ def fill_nans(log, log_ids):
     def preprocess_case(case_data):
         return case_data.apply(replace_initial_nans)
 
-    preprocessed_log = (log.groupby(log_ids.case).apply(preprocess_case)).reset_index(drop=True)
+    preprocessed_log = (log.groupby(log_ids.case).apply(preprocess_case, include_groups=False)).reset_index()
     preprocessed_log = preprocessed_log.ffill()
     return preprocessed_log
 
