@@ -1,0 +1,2 @@
+case_id,activity,enable_time,start_time,end_time,resource
+1,C,2025-01-29 09:15:00+00:00,2025-01-29 09:15:00+00:00,2025-01-29 09:20:00+00:00,Worker-1
